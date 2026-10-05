@@ -148,6 +148,11 @@ Descriptions of scripts are the first sentence of each script's own docstring. D
 | `revision_r1_scene_counts.py` | Scenes per summer month from `code/gee/panel_meta.json`. |
 | `revision_r1_reretrieved_contrasts.py` | Primary match repeated with re-retrieved LST (after the Earth Engine export). |
 
+| `revision_r1_gate3_reretrieved.py` | Gates 2 and 3 on the primary match with re-retrieved LST. |
+| `revision_r1_ndvi_thresholds.py` | Primary match on the four threshold panels. |
+| `revision_r1_rerun_compare.py` | Compares a full rerun with the saved tables. |
+| `revision_r1_fig1_map.py` | Fig. 1 with scale bar, north arrow and coastline source. |
+
 ## code/gee
 
 ### Earth Engine export scripts
@@ -165,6 +170,8 @@ Descriptions of scripts are the first sentence of each script's own docstring. D
 | `landsat_scenes.py` | Find the Landsat scenes behind your LST CSV, and export the same columns for other dates. |
 
 | `gee_r1_lst_reretrieval.py` | LST re-retrieval with a vegetation-following emissivity from the Collection 2 radiance layers. Not yet run. |
+
+| `gee_r1_export_panel_thresholds.py` | `export_panel.py` with the two NDVI thresholds as arguments. |
 
 ### Saved exports (inputs to the analysis)
 
@@ -393,3 +400,8 @@ Descriptions of scripts are the first sentence of each script's own docstring. D
 |---|---|
 | `fig_r1_dose_contrasts.png` | Mean matched contrast for each dose, primary match |
 | `fig_r1_negi_weights.png` | NEGI on measured contrasts over α/β and p |
+| `r1_reretrieved_contrasts.csv` | release 2.3.0 |
+| `r1_gate3_primary_reretrieved.csv` | release 2.3.0 |
+| `r1_ndvi_thresholds.csv` | release 2.3.0 |
+| `r1_rerun_comparison.csv` | release 2.3.0 |
+| `fig_r1_cell_classes.png` (figures_r1) | Fig. 1, release 2.3.0 |

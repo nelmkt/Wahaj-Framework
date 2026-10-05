@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.3.1 (5 October 2026), release `v2.3.1`
+
+- Archived on Zenodo: release v2.3.1, DOI [10.5281/zenodo.23168530](https://doi.org/10.5281/zenodo.23168530); all versions [10.5281/zenodo.23168529](https://doi.org/10.5281/zenodo.23168529).
+- `.zenodo.json` archive metadata; README DOI badge; `CITATION.cff` DOI. No code, table or figure changed.
+
 ## 2.3.0 (5 October 2026), branch `v11-framework-ml`, release `v2.3.0`
 
 The remaining supervisor items. No existing code, table or figure changed.

@@ -15,7 +15,17 @@ repository-code: "https://github.com/nelmkt/Wahaj-Framework"
 
 license: MIT
 
-version: "2.3.0"
+version: "2.3.1"
+
+doi: "10.5281/zenodo.23168529"
+
+identifiers:
+  - type: doi
+    value: "10.5281/zenodo.23168529"
+    description: "Zenodo archive, all versions"
+  - type: doi
+    value: "10.5281/zenodo.23168530"
+    description: "Zenodo archive of release v2.3.1"
 
 abstract: >
   Wahaj is a reproducible Python and Google Earth Engine framework for evaluating

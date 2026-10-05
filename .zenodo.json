@@ -3,8 +3,20 @@
   "upload_type": "software",
   "description": "Code, Google Earth Engine exports, result tables and figures of the Wahaj framework: a reproducible pipeline that combines Landsat 8 land surface temperature, a spatially validated XGBoost model, a matched-contrast benchmark of measured cooling where vegetation was established, counterfactual gates for model-based use, the Normalized Environmental Gain Index (NEGI) and a hypothetical water-energy ledger, applied to Jeddah, Saudi Arabia.",
   "creators": [
-    {"name": "Almaktoum, Nelly F.", "affiliation": "Faculty of Computing and Information Technology, King Abdulaziz University"}
+    {
+      "name": "Almaktoum, Nelly F.",
+      "affiliation": "Faculty of Computing and Information Technology, King Abdulaziz University",
+      "orcid": "0009-0007-9887-0280"
+    }
   ],
   "license": "mit",
-  "keywords": ["urban greening", "land surface temperature", "remote sensing", "XGBoost", "spatial cross-validation", "seawater desalination", "Jeddah"]
+  "keywords": [
+    "urban greening",
+    "land surface temperature",
+    "remote sensing",
+    "XGBoost",
+    "spatial cross-validation",
+    "seawater desalination",
+    "Jeddah"
+  ]
 }

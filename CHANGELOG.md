@@ -1,5 +1,16 @@
 # Changelog
 
+## 2.2.0 (5 October 2026), branch `v11-framework-ml`, release `v2.2.0`
+
+Added for the supervisor review of 5 October 2026 (see `docs/REVISION_R1.md`). No existing code, table or figure changed; the new scripts import the framework modules read-only and refuse to overwrite.
+
+- `code/src/revision_r1_analyses.py`: emissivity diagnostic and first-order bound, contrast for each dose, slope with an intercept, model sensitivity fits (without coordinates, without emissivity, random folds), residual variogram, NEGI over α/β and p, population counts.
+- `code/src/revision_r1_gate3.py`: gates 2 and 3 on the primary match (Models A and B, 200 joint refits).
+- `code/src/revision_r1_psf_recovery.py`: point-spread extension of the synthetic recovery test.
+- `code/src/revision_r1_figures.py`, `code/src/revision_r1_scene_counts.py`.
+- `code/gee/gee_r1_lst_reretrieval.py` and `code/src/revision_r1_reretrieved_contrasts.py`: LST re-retrieval with a vegetation-following emissivity. **Not yet run**; parameters must be confirmed before use.
+- `tables_revision_r1/` (12 tables) and `figures_r1/` (2 figures).
+
 ## 2.1.0 (2 October 2026), branch `v11-framework-ml`, release `v2.1.0`
 
 Added

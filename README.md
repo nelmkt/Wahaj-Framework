@@ -4,7 +4,7 @@
 [![XGBoost 3.4](https://img.shields.io/badge/XGBoost-3.4-EB5E28?style=flat)](https://xgboost.readthedocs.io/)
 [![Google Earth Engine](https://img.shields.io/badge/Google%20Earth%20Engine-Landsat%208%20C2%20L2-4285F4?style=flat&logo=googleearth&logoColor=white)](https://earthengine.google.com/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat)](LICENSE)
-[![Version 2.1.0](https://img.shields.io/badge/version-2.1.0-informational?style=flat)](https://github.com/nelmkt/Wahaj-Framework/releases/tag/v2.1.0)
+[![Version 2.2.0](https://img.shields.io/badge/version-2.2.0-informational?style=flat)](https://github.com/nelmkt/Wahaj-Framework/releases/tag/v2.2.0)
 [![ORCID](https://img.shields.io/badge/ORCID-0009--0007--9887--0280-A6CE39?style=flat&logo=orcid&logoColor=white)](https://orcid.org/0009-0007-9887-0280)
 [![Email](https://img.shields.io/badge/Email-nalmaktoum0001%40stu.kau.edu.sa-D14836?style=flat&logo=gmail&logoColor=white)](mailto:nalmaktoum0001@stu.kau.edu.sa)
 
@@ -41,6 +41,11 @@ Wahaj is the framework described in the paper. It asks whether an XGBoost model 
 | Model B outside support | **14/744** cells pass the feature-space screen, including **0/75** fully greened cells | [`test_support_counts.csv`](tables/test_support_counts.csv), outside rows. This is the **narrower concurrent-change sensitivity**, not the 1,006-cell primary population. |
 | Model B minus measured outside contrast | **+1.01 to +7.24 °C** across dose classes | [`test_by_dose.csv`](tables/test_by_dose.csv), outside Model B rows. The gap grows with dose; the model does not corroborate that outside gradient. |
 | Illustrative NEGI on measured contrasts | Cost exponent 0.5: **−0.127, −0.203, −0.213, 0**; linear cost: **+0.110, +0.034, −0.078, 0** for the four outside dose classes | [`tradeoff_illustration_v11.csv`](tables_revision_v11/tradeoff_illustration_v11.csv). An illustration on different cells, not a released index value; the sign is decided by the assumed cost shape. |
+| Product emissivity at greened cells | Unchanged between 2014–15 and 2024–25 at **100%** of matched greened cells while NDVI rises; a first-order correction moves the primary slope from **−1.181** to **−1.452 °C per pixel** (largest case) | [`r1_emissivity_diagnostic.csv`](tables_revision_r1/r1_emissivity_diagnostic.csv), [`r1_emissivity_bound.csv`](tables_revision_r1/r1_emissivity_bound.csv). Collection 2 vegetation-adjustment anomaly; the measured cooling is conservative. Full re-retrieval script added, not yet run. |
+| Thermal footprint (simulation) | Under a 150 m point-spread function the own-only slope recovers **0.26** (isolated cells) to **0.68** (5 × 5-cell patches) of a known effect | [`r1_psf_recovery.csv`](tables_revision_r1/r1_psf_recovery.csv). No physical spillover in the simulation: ring terms pick up optical blur. |
+| Dose relation with an intercept | Slope **−0.966 °C per pixel**, intercept **−1.34 °C** (outside) | [`r1_slope_intercept.csv`](tables_revision_r1/r1_slope_intercept.csv), [`r1_dose_contrasts.csv`](tables_revision_r1/r1_dose_contrasts.csv). Dose-class means are the primary estimates. |
+| Gates on the primary match | Model B support **15/419** (1–2 pixels), **0** for larger classes; Model B minus measured **+1.32 to +8.30 °C** | [`r1_gate3_primary.csv`](tables_revision_r1/r1_gate3_primary.csv). Same outcome as the concurrent-change match. |
+| Model sensitivity | R² **0.741** without coordinates, **0.767** without emissivity, **0.881** with random folds | [`r1_model_sensitivity.csv`](tables_revision_r1/r1_model_sensitivity.csv), [`r1_variogram.csv`](tables_revision_r1/r1_variogram.csv). Random folds overstate skill for unsampled places. |
 
 The 1,006-cell matched estimate and the 744-cell model diagnostics use different treated populations. They must not be read as one validation result. The small-patch exposure analyses are descriptive: the available data do not separate thermal-pixel blur, edge effects, neighbour cooling and neighbourhood confounding. The within-90 m ordering is **not resolved**.
 
@@ -68,6 +73,8 @@ code/
 
 tables/              result tables (CSV, JSON)
 tables_revision_v11/ four tables added for the paper (two algebraic checks, model benchmark, trade-off illustration)
+tables_revision_r1/  tables added for the supervisor revision (release 2.2.0)
+figures_r1/          two figures added for the supervisor revision
 figures_png/         figures (PNG)
 figures_pdf/         figures (PDF)
 
@@ -169,7 +176,7 @@ If you use this code or these tables, please cite the repository. The paper refe
   author  = {Almaktoum, Nelly F.},
   title   = {Wahaj: A Remote Sensing and Machine Learning Framework for Evaluating Urban Greening--Energy Trade-Offs in Desalination-Dependent Cities, with a Jeddah Case Study},
   year    = {2026},
-  version = {2.1.0},
+  version = {2.2.0},
   url     = {https://github.com/nelmkt/Wahaj-Framework}
 }
 ```

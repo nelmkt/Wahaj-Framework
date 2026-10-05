@@ -230,3 +230,15 @@ The author reports 62 tests passing on the full package (2026-10-02). In this re
 | `tables_revision_v11/tradeoff_illustration_v11.csv` | `python code/src/tradeoff_illustration_v11.py .` |
 
 Both scripts refuse to overwrite an existing table; work in a copy or remove the saved file first. The benchmark stops if its XGBoost row does not reproduce `tables/model_cv.csv`.
+
+## Tables added in release 2.2.0
+
+| Output | Command (from the repository root, panels decompressed) |
+|---|---|
+| most of `tables_revision_r1/` | `python code/src/revision_r1_analyses.py .` |
+| `tables_revision_r1/r1_gate3_primary.csv` | `python code/src/revision_r1_gate3.py .` (about 20 minutes) |
+| `tables_revision_r1/r1_psf_recovery.csv` | `python code/src/revision_r1_psf_recovery.py .` |
+| `tables_revision_r1/r1_scene_counts.csv` | `python code/src/revision_r1_scene_counts.py .` |
+| `figures_r1/` | `python code/src/revision_r1_figures.py .` |
+
+`revision_r1_analyses.py` creates `tables_revision_r1/` and stops if it exists; work in a copy. It stops unless its full-model cross-validation reproduces `tables/model_cv.csv`. The LST re-retrieval needs an Earth Engine account: `python code/gee/gee_r1_lst_reretrieval.py --project YOUR-PROJECT`, then `python code/src/revision_r1_reretrieved_contrasts.py .`

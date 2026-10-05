@@ -15,7 +15,7 @@ repository-code: "https://github.com/nelmkt/Wahaj-Framework"
 
 license: MIT
 
-version: "2.2.0"
+version: "2.3.0"
 
 abstract: >
   Wahaj is a reproducible Python and Google Earth Engine framework for evaluating

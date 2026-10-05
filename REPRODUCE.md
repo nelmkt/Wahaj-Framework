@@ -242,3 +242,17 @@ Both scripts refuse to overwrite an existing table; work in a copy or remove the
 | `figures_r1/` | `python code/src/revision_r1_figures.py .` |
 
 `revision_r1_analyses.py` creates `tables_revision_r1/` and stops if it exists; work in a copy. It stops unless its full-model cross-validation reproduces `tables/model_cv.csv`. The LST re-retrieval needs an Earth Engine account: `python code/gee/gee_r1_lst_reretrieval.py --project YOUR-PROJECT`, then `python code/src/revision_r1_reretrieved_contrasts.py .`
+
+## Added in release 2.3.0
+
+| Output | Command |
+|---|---|
+| `code/gee/panel_lst_reretrieved_r1.csv` | `python code/gee/gee_r1_lst_reretrieval.py --project YOUR-PROJECT` (Earth Engine) |
+| `tables_revision_r1/r1_reretrieved_contrasts.csv` | `python code/src/revision_r1_reretrieved_contrasts.py .` |
+| `tables_revision_r1/r1_gate3_primary_reretrieved.csv` | `python code/src/revision_r1_gate3_reretrieved.py .` |
+| `code/gee/panel_thr_*_r1.csv` | `python code/gee/gee_r1_export_panel_thresholds.py --project YOUR-PROJECT --nonveg 0.10 --green 0.30 --skip-et --out ...` (and 0.20/0.30, 0.15/0.25, 0.15/0.35) |
+| `tables_revision_r1/r1_ndvi_thresholds.csv` | `python code/src/revision_r1_ndvi_thresholds.py .` |
+| `tables_revision_r1/r1_rerun_comparison.csv` | `python code/src/run_framework.py --panel code/gee/panel.csv --out RERUN` then `python code/src/revision_r1_rerun_compare.py . RERUN` |
+| `figures_r1/fig_r1_cell_classes.png` | `python code/src/revision_r1_fig1_map.py .` |
+
+The `.gz` exports decompress to the `.csv` files named in `MANIFEST_SHA256.txt`.

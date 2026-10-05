@@ -1,5 +1,14 @@
 # Changelog
 
+## 2.3.0 (5 October 2026), branch `v11-framework-ml`, release `v2.3.0`
+
+The remaining supervisor items. No existing code, table or figure changed.
+
+- LST re-retrieval run in Earth Engine (`code/gee/gee_r1_lst_reretrieval.py`, emissivity after Ermida et al. 2020); export `code/gee/panel_lst_reretrieved_r1.csv.gz`; contrasts and gates repeated on it (`r1_reretrieved_contrasts.csv`, `r1_gate3_primary_reretrieved.csv`).
+- NDVI-threshold sensitivity: four re-exported panels (`code/gee/gee_r1_export_panel_thresholds.py`, `code/gee/panel_thr_*_r1.csv.gz`) and `r1_ndvi_thresholds.csv`.
+- Full pipeline rerun into a separate folder and comparison with the saved tables (`r1_rerun_comparison.csv`).
+- Fig. 1 redrawn with a scale bar, a north arrow and the coastline source (`figures_r1/fig_r1_cell_classes.png`).
+
 ## 2.2.0 (5 October 2026), branch `v11-framework-ml`, release `v2.2.0`
 
 Added for the supervisor review of 5 October 2026 (see `docs/REVISION_R1.md`). No existing code, table or figure changed; the new scripts import the framework modules read-only and refuse to overwrite.

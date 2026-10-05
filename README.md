@@ -4,7 +4,7 @@
 [![XGBoost 3.4](https://img.shields.io/badge/XGBoost-3.4-EB5E28?style=flat)](https://xgboost.readthedocs.io/)
 [![Google Earth Engine](https://img.shields.io/badge/Google%20Earth%20Engine-Landsat%208%20C2%20L2-4285F4?style=flat&logo=googleearth&logoColor=white)](https://earthengine.google.com/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat)](LICENSE)
-[![Version 2.2.0](https://img.shields.io/badge/version-2.2.0-informational?style=flat)](https://github.com/nelmkt/Wahaj-Framework/releases/tag/v2.2.0)
+[![Version 2.3.0](https://img.shields.io/badge/version-2.3.0-informational?style=flat)](https://github.com/nelmkt/Wahaj-Framework/releases/tag/v2.3.0)
 [![ORCID](https://img.shields.io/badge/ORCID-0009--0007--9887--0280-A6CE39?style=flat&logo=orcid&logoColor=white)](https://orcid.org/0009-0007-9887-0280)
 [![Email](https://img.shields.io/badge/Email-nalmaktoum0001%40stu.kau.edu.sa-D14836?style=flat&logo=gmail&logoColor=white)](mailto:nalmaktoum0001@stu.kau.edu.sa)
 
@@ -46,6 +46,9 @@ Wahaj is the framework described in the paper. It asks whether an XGBoost model 
 | Dose relation with an intercept | Slope **−0.966 °C per pixel**, intercept **−1.34 °C** (outside) | [`r1_slope_intercept.csv`](tables_revision_r1/r1_slope_intercept.csv), [`r1_dose_contrasts.csv`](tables_revision_r1/r1_dose_contrasts.csv). Dose-class means are the primary estimates. |
 | Gates on the primary match | Model B support **15/419** (1–2 pixels), **0** for larger classes; Model B minus measured **+1.32 to +8.30 °C** | [`r1_gate3_primary.csv`](tables_revision_r1/r1_gate3_primary.csv). Same outcome as the concurrent-change match. |
 | Model sensitivity | R² **0.741** without coordinates, **0.767** without emissivity, **0.881** with random folds | [`r1_model_sensitivity.csv`](tables_revision_r1/r1_model_sensitivity.csv), [`r1_variogram.csv`](tables_revision_r1/r1_variogram.csv). Random folds overstate skill for unsampled places. |
+| Re-retrieved LST (vegetation-following emissivity) | Primary outside slope **−1.246 °C per pixel** against **−1.181** with the product LST | [`r1_reretrieved_contrasts.csv`](tables_revision_r1/r1_reretrieved_contrasts.csv), [`r1_gate3_primary_reretrieved.csv`](tables_revision_r1/r1_gate3_primary_reretrieved.csv). Emissivity after Ermida et al. (2020). |
+| NDVI thresholds | Primary outside slope **−1.339 to −0.993 °C per pixel** across non-vegetated 0.10–0.20 and greened 0.25–0.35 | [`r1_ndvi_thresholds.csv`](tables_revision_r1/r1_ndvi_thresholds.csv); re-exported panels in `code/gee/*_r1.csv.gz`. |
+| Full rerun | **30** tables rewritten by `run_framework.py` compared with the saved ones; largest relative difference **1.0e+12** | [`r1_rerun_comparison.csv`](tables_revision_r1/r1_rerun_comparison.csv). |
 
 The 1,006-cell matched estimate and the 744-cell model diagnostics use different treated populations. They must not be read as one validation result. The small-patch exposure analyses are descriptive: the available data do not separate thermal-pixel blur, edge effects, neighbour cooling and neighbourhood confounding. The within-90 m ordering is **not resolved**.
 
@@ -176,7 +179,7 @@ If you use this code or these tables, please cite the repository. The paper refe
   author  = {Almaktoum, Nelly F.},
   title   = {Wahaj: A Remote Sensing and Machine Learning Framework for Evaluating Urban Greening--Energy Trade-Offs in Desalination-Dependent Cities, with a Jeddah Case Study},
   year    = {2026},
-  version = {2.2.0},
+  version = {2.3.0},
   url     = {https://github.com/nelmkt/Wahaj-Framework}
 }
 ```

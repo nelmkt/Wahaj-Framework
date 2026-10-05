@@ -137,6 +137,17 @@ Descriptions of scripts are the first sentence of each script's own docstring. D
 | `benchmark_models_v11.py` | Scores XGBoost, random forest, gradient boosting and linear regression on the same cells, predictors and spatial folds. |
 | `tradeoff_illustration_v11.py` | Evaluates NEGI on measured contrasts for illustration and collects the hypothetical irrigation energy per degree of measured cooling. |
 
+### 8. Added for the supervisor revision (release 2.2.0)
+
+| File | What it does |
+|---|---|
+| `revision_r1_analyses.py` | Emissivity diagnostic and bound, dose-by-dose contrasts, slope with intercept, model sensitivity fits, residual variogram, NEGI weights, population counts. |
+| `revision_r1_gate3.py` | Gates 2 and 3 on the primary match. |
+| `revision_r1_psf_recovery.py` | Synthetic landscape blurred by a 150 m point-spread function; recovery of a known effect. |
+| `revision_r1_figures.py` | The two revision figures. |
+| `revision_r1_scene_counts.py` | Scenes per summer month from `code/gee/panel_meta.json`. |
+| `revision_r1_reretrieved_contrasts.py` | Primary match repeated with re-retrieved LST (after the Earth Engine export). |
+
 ## code/gee
 
 ### Earth Engine export scripts
@@ -152,6 +163,8 @@ Descriptions of scripts are the first sentence of each script's own docstring. D
 | `fetch_landcover.py` | Fetch the land-cover labels straight from Earth Engine — no asset upload, no Drive export. |
 | `gee_monthly_isolation.py` | Export endpoint monthly NDVI and a complete 30 m greening-neighborhood screen. |
 | `landsat_scenes.py` | Find the Landsat scenes behind your LST CSV, and export the same columns for other dates. |
+
+| `gee_r1_lst_reretrieval.py` | LST re-retrieval with a vegetation-following emissivity from the Collection 2 radiance layers. Not yet run. |
 
 ### Saved exports (inputs to the analysis)
 
@@ -357,3 +370,26 @@ Descriptions of scripts are the first sentence of each script's own docstring. D
 | `own_only_vs_joint_identity_v11.csv` | own-only slope reproduced from joint-ring coefficients, five specifications |
 | `model_benchmark_v11.csv` | spatially blocked skill of four regressors on Model B's training set |
 | `tradeoff_illustration_v11.csv` | illustrative NEGI on measured contrasts and hypothetical irrigation energy per degree, by dose class |
+
+## tables_revision_r1
+
+| File | Content |
+|---|---|
+| `r1_dose_contrasts.csv` | see `docs/REVISION_R1.md` |
+| `r1_emissivity_bound.csv` | see `docs/REVISION_R1.md` |
+| `r1_emissivity_diagnostic.csv` | see `docs/REVISION_R1.md` |
+| `r1_gate3_primary.csv` | see `docs/REVISION_R1.md` |
+| `r1_model_sensitivity.csv` | see `docs/REVISION_R1.md` |
+| `r1_negi_weights.csv` | see `docs/REVISION_R1.md` |
+| `r1_populations.csv` | see `docs/REVISION_R1.md` |
+| `r1_psf_recovery.csv` | see `docs/REVISION_R1.md` |
+| `r1_scene_counts.csv` | see `docs/REVISION_R1.md` |
+| `r1_slope_intercept.csv` | see `docs/REVISION_R1.md` |
+| `r1_variogram.csv` | see `docs/REVISION_R1.md` |
+
+## figures_r1
+
+| File | Content |
+|---|---|
+| `fig_r1_dose_contrasts.png` | Mean matched contrast for each dose, primary match |
+| `fig_r1_negi_weights.png` | NEGI on measured contrasts over α/β and p |

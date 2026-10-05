@@ -1,4 +1,4 @@
-"""LST re-retrieval with an emissivity that follows current vegetation (supervisor review M1). NOT YET RUN.
+"""LST re-retrieval with an emissivity that follows current vegetation (supervisor review M1).
 
 Collection 2 ST overrides the emissivity of pixels that were bare in the ASTER era (2000-2008) with bare-soil
 emissivity, so ST_EMIS does not rise where vegetation was established later (USGS Collection 2 known issues). This
@@ -7,7 +7,7 @@ script inverts the single-channel radiative transfer equation with the product's
     LT = (Lobs - Lup - tau * (1 - e) * Ldown) / (tau * e),     T = K2 / ln(K1 / LT + 1)
 
 with e = fv * E_VEG + (1 - fv) * ST_EMIS, fv = clip((NDVI - NDVI_S) / (NDVI_V - NDVI_S), 0, 1)^2.
-E_VEG, NDVI_S and NDVI_V are parameters the author must confirm and cite before use.
+E_VEG, NDVI_S and NDVI_V are those of Ermida et al. (2020, Remote Sensing 12, 1471; open-source code\nhttps://github.com/sofiaermida/Landsat_SMW_LST). Greened and control cells were bare in the ASTER period, so ST_EMIS\nis their bare-soil emissivity; where NDVI < NDVI_S the re-retrieval reduces to the product LST (a built-in check).
 Masking and compositing are those of code/gee/export_panel.py; the values are sampled at the panel's cell centres.
 
 usage (needs the author's Earth Engine account):
@@ -25,7 +25,7 @@ YEARS = (2014, 2015, 2018, 2019, 2024, 2025)
 MONTHS = (5, 6, 7, 8, 9)
 RECT = [39.0, 21.2, 39.4, 21.8]
 K1, K2 = 774.8853, 1321.0789          # Landsat 8 band 10 (also in each scene's metadata)
-E_VEG, NDVI_S, NDVI_V = 0.9885, 0.2, 0.86   # TO CONFIRM AND CITE before the results are used
+E_VEG, NDVI_S, NDVI_V = 0.99, 0.2, 0.86     # Ermida et al. (2020), Landsat_SMW_LST modules compute_FVC.js and compute_emissivity.js
 
 
 def main():

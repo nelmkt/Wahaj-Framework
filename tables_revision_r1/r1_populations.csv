@@ -1,0 +1,21 @@
+item,value
+"Model A training cells, group control",16363.0
+"Model A training cells, group other",4892.0
+"Model A training cells, group ring",298.0
+"Model A training cells, total",21553.0
+"Model B training cells, total",19650.0
+ring cells in the representative sample (rnd < 0.10),298.0
+0.05-degree blocks in Model B training set,73.0
+0.05-degree blocks in the panel (bootstrap units),73.0
+outside the built-up area: greened cells,1014.0
+outside the built-up area: greened cells dropped (stratum with < 3 controls),8.0
+"outside the built-up area: greened cells dropped, of which in a stratum with 0 controls",2.0
+outside the built-up area: strata used,31.0
+outside the built-up area: median controls per used stratum,116.0
+outside the built-up area: blocks with matched greened cells,34.0
+built-up surroundings: greened cells,319.0
+built-up surroundings: greened cells dropped (stratum with < 3 controls),6.0
+"built-up surroundings: greened cells dropped, of which in a stratum with 0 controls",3.0
+built-up surroundings: strata used,47.0
+built-up surroundings: median controls per used stratum,42.0
+built-up surroundings: blocks with matched greened cells,41.0

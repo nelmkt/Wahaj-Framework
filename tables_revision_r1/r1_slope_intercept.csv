@@ -1,0 +1,7 @@
+setting,quantity,estimate,lo,hi,n_boot_valid
+outside the built-up area,slope_no_intercept_C_per_px,-1.1805706405801224,-1.2519858900832441,-0.9252715933911743,2000
+outside the built-up area,slope_with_intercept_C_per_px,-0.9662842843899875,-1.028551223649707,-0.6491247043333522,2000
+outside the built-up area,intercept_C,-1.339058481919074,-1.786582045440261,-0.9907999329871731,2000
+built-up surroundings,slope_no_intercept_C_per_px,-0.782840102139666,-0.9159784976492266,-0.6590442865416002,2000
+built-up surroundings,slope_with_intercept_C_per_px,-0.364184071254026,-0.4480274541697938,-0.2701732599991571,2000
+built-up surroundings,intercept_C,-1.2107843051751648,-1.4699000877076929,-0.8978671935755664,2000

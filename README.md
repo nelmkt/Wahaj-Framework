@@ -192,6 +192,6 @@ Released under the [MIT License](LICENSE), © 2026 Nelly F. Almaktoum. The licen
 
 ## Contact
 
-Nelly F. Almaktoum · [nalmaktoum0001@stu.kau.edu.sa](mailto:nalmaktoum0001@stu.kau.edu.sa) · [ORCID 0009-0007-9887-0280](https://orcid.org/0009-0007-9887-0280)
+Nelly F. Almaktoum - [nalmaktoum0001@stu.kau.edu.sa](mailto:nalmaktoum0001@stu.kau.edu.sa) - [ORCID 0009-0007-9887-0280](https://orcid.org/0009-0007-9887-0280)
 
 Questions and bug reports are also welcome through the repository's [issues](https://github.com/nelmkt/Wahaj-Framework/issues).

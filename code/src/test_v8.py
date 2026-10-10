@@ -114,8 +114,6 @@ def test_population_inventory_covers_all_tables_without_reading_blinded_key():
         for row in baseline.itertuples(index=False):
             assert listed.loc[row.table, "population"] == row.population
             assert listed.loc[row.table, "interpretation"] == row.interpretation
-        # The inventory lists itself, but all other rows need an independent
-        # population assignment, including historical inventory snapshots.
         for row in rows.itertuples(index=False):
             if row.table != current:
                 assert population(row.table) == (row.population, row.interpretation)

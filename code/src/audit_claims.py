@@ -26,7 +26,6 @@ def main():
         matching = [d for d in dose if d["setting"] == row["setting"] and d["pixels"] == row["pixels"]]
         assert len(matching) == 1
         close(row["classified"], matching[0]["n_treated"])
-        # An estimand below the reporting minimum has its estimate/count withheld in measured_dose.
         if int(row["matched"]) >= 10:
             close(row["matched"], matching[0]["n_treated_matched"])
         sr = [s for s in support if s["setting"] == row["setting"] and s["pixels"] == row["pixels"]]

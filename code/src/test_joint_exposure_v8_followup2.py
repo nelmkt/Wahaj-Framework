@@ -23,7 +23,6 @@ class JointExposureFollowupTests(unittest.TestCase):
         self.assertTrue(np.isnan(beta).all())
 
     def test_expanded_calibration_balances_belt_and_pixel_mix(self):
-        # Both binary margins vary in the source; target is a feasible tilt.
         combos = np.array(np.meshgrid([-1., 0., 1.], [-1., 0., 1.],
                                       [-1., 0., 1.], [0., 1.], [0., 1.])).reshape(5, -1).T
         design = calibration_matrix(combos[:, :3], combos[:, 3], combos[:, 4])

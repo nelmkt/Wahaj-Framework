@@ -63,8 +63,6 @@ def persistence_rows(df: pd.DataFrame) -> pd.DataFrame:
             means = np.column_stack([selected[f"ndvi_mean_{k}"].to_numpy(float)
                                      for k in MONTH_KEYS])
             means[means < -1000] = np.nan
-            # A month counts as adequately observed when at least half the cell's
-            # classified greened 30 m pixels have a clear monthly median.
             required = np.ceil(selected.n_greened_px.to_numpy(float)[:, None] / 2)
             adequate = valid + 0.25 >= required
             n_adequate = adequate.sum(axis=1)

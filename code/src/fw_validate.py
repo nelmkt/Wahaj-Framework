@@ -17,7 +17,6 @@ def tolerance_status(lo, hi, margin, n, blocks, valid, requested, cfg):
         return "insufficient_joint_refits"
     if not np.isfinite([lo, hi]).all():
         return "uncertainty_unavailable"
-    # Conservative 95% containment; conventional TOST would use a 90% interval.
     return "within_tolerance" if lo >= -margin and hi <= margin else "not_demonstrated"
 
 

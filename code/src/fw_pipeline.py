@@ -49,26 +49,20 @@ def run(cfg: Config) -> dict:
     tables.mkdir(parents=True, exist_ok=True)
     (out / "manuscript").mkdir(parents=True, exist_ok=True)
 
-    # 1  remote sensing: the cell panel
     df, meta = panel.load(cfg)
     meta["analysis_provenance"] = "Matched estimates and Models A/B were computed in this framework invocation; see the follow-up record for any later table refreshes."
     print(f"1 panel: {len(df):,} cells ({meta['n_dropped_missing']:,} dropped for a missing year)", flush=True)
 
-    # 2  measured cooling
     R = matching.run_all(df, cfg)
     for st in SETTINGS:
         e = R[st]["estimates"]["per_pixel"]
         print(f"2 measured, {st}: {e['estimate_C']:+.2f} deg C per greened pixel [{e['lo_C']:+.2f}, {e['hi_C']:+.2f}]", flush=True)
 
-    # 3  machine learning
     cv = model.spatial_cv(model.training_set(df, cfg.strict_exclusion_m), cfg)
     print(f"3 model: spatial cross-validation R2 {cv['r2']:.3f}, RMSE {cv['rmse_C']:.2f} deg C ({cv['n']:,} cells); "
           f"fitting {cfg.n_refits} refits", flush=True)
     M = model.Model(df, cfg)
 
-    # 4  test
-    # test A: the model as trained; test B: refitted without any cell within strict_exclusion_m of greening. Decision
-    # B supplies the supported-domain exploratory gate; a supplied practical tolerance is also required.
     VA = validate.run(df, M, R, cfg)
     M = model.Model(df, cfg, exclude_near_m=cfg.strict_exclusion_m)
     VB = validate.run(df, M, R, cfg)
@@ -84,13 +78,10 @@ def run(cfg: Config) -> dict:
         print(f"4 test {r['test']}, {r['setting']}: model {r['model_C']:+.2f} vs measured {r['measured_C']:+.2f} deg C -> "
               f"{r['status']} (all-cell diagnostic)", flush=True)
 
-    # 5  water and energy
     L = ledger.run(cfg, meta)
 
-    # 6  decision support
     D = decision.run(df, M, R, V, L, cfg)
 
-    # tables, figures, report
     def stack(name):
         return pd.concat([R[st][name].assign(setting=st) for st in SETTINGS], ignore_index=True)
 
@@ -100,7 +91,7 @@ def run(cfg: Config) -> dict:
         stack(name).to_csv(tables / f"measured_{name}.csv", index=False)
     pd.DataFrame([{"setting": st, **R[st]["n"]} for st in SETTINGS]).to_csv(tables / "cells.csv", index=False)
     pd.DataFrame([{k: v for k, v in cv.items() if k != "oof"}]).to_csv(tables / "model_cv.csv", index=False)
-    M.importance().to_csv(tables / "model_importance.csv", index=False)      # the model used for decisions (B)
+    M.importance().to_csv(tables / "model_importance.csv", index=False)
     pd.concat([V["by_setting"], V["strict"]]).to_csv(tables / "test_by_setting.csv", index=False)
     pd.concat([V["by_dose"], V["strict_by_dose"]]).to_csv(tables / "test_by_dose.csv", index=False)
     V["strict_by_coast"].to_csv(tables / "test_by_coast.csv", index=False)
@@ -127,7 +118,7 @@ def run(cfg: Config) -> dict:
            "measured": {k: v for k, v in R.items()}, "model": {k: v for k, v in cv.items() if k != "oof"},
            "importance": M.importance(), "test": V, "ledger": L, "decision": D}
     clean = _jsonable(res)
-    for st in SETTINGS:                      # bootstrap draws and cell flags stay out of results.json
+    for st in SETTINGS:
         for k in ("reps", "treated", "weights", "controls", "key"):
             clean["measured"][st].pop(k, None)
     (tables / "results.json").write_text(json.dumps(clean, indent=1, ensure_ascii=False, allow_nan=False), encoding="utf-8")

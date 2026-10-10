@@ -45,7 +45,7 @@ def save(name, frame):
 cfg = Config(panel_path=ROOT / "code" / "gee" / "panel.csv", out_dir=ROOT)
 df, meta = panel.load(cfg)
 OUTSIDE, BUILT = SETTINGS
-key = panel.strata(df, cfg, baseline_only=True)                # primary match (pre-treatment-only strata)
+key = panel.strata(df, cfg, baseline_only=True)
 boot = matching.Bootstrap(df.block, cfg.n_boot, cfg.seed)
 
 
@@ -59,7 +59,6 @@ T_OUT, C_OUT = groups(OUTSIDE)
 W_OUT = matching.control_weights(df, T_OUT, C_OUT, key, cfg)
 M_OUT = T_OUT & W_OUT.gt(0)
 
-# ---------------------------------------------------------------- M1: emissivity diagnostic
 rows = []
 classes = [("greened, 1–2 px", 1, 2), ("greened, 3–4 px", 3, 4), ("greened, 5–8 px", 5, 8), ("greened, 9/9 px", 9, 9)]
 for label, lo, hi in classes + [("matched controls", None, None)]:
@@ -73,11 +72,8 @@ for label, lo, hi in classes + [("matched controls", None, None)]:
                  "emis_slope_K_per_001_median": d.emis_slope_per_001.median()})
 save("r1_emissivity_diagnostic.csv", pd.DataFrame(rows))
 
-# first-order bound: greened cell i's post-period emissivity raised by delta * dose/9 (area-weighted mixing);
-# dT = (dT/de) * de with dT/de from fw_panel.emissivity_slope_K (Wien approximation, no atmospheric term, an upper
-# bound on the size of the effect). Controls are unchanged.
 rows = []
-slope_K = panel.emissivity_slope_K(df["lst_post"], df["emis_post"], cfg)          # K per unit emissivity (negative)
+slope_K = panel.emissivity_slope_K(df["lst_post"], df["emis_post"], cfg)
 for delta in (0.0, 0.01, 0.02, 0.03):
     d = df.copy()
     adj = np.where(T_OUT, slope_K * delta * d.n_greened_px / 9.0, 0.0)
@@ -88,7 +84,6 @@ for delta in (0.0, 0.01, 0.02, 0.03):
                  "mean_adjustment_9of9_C": float(np.mean(adj[(T_OUT & df.n_greened_px.eq(9)).to_numpy()])) if delta else 0.0})
 save("r1_emissivity_bound.csv", pd.DataFrame(rows))
 
-# ---------------------------------------------------------------- M4: dose classes 1..9 and the intercept
 rows = []
 for setting in SETTINGS:
     t, c = groups(setting)
@@ -138,7 +133,6 @@ for setting in SETTINGS:
                      "n_boot_valid": len(reps)})
 save("r1_slope_intercept.csv", pd.DataFrame(rows))
 
-# ---------------------------------------------------------------- M8: model metrics and sensitivity fits
 train = model.training_set(df, cfg.strict_exclusion_m)
 y = train["lst_post"].to_numpy(float)
 blocks = train["block"]
@@ -167,7 +161,6 @@ ref = pd.read_csv(ROOT / "tables" / "model_cv.csv").iloc[0]
 assert abs(ms.r2[0] - ref.r2) < 1e-9 and abs(ms.rmse_C[0] - ref.rmse_C) < 1e-9, "full model does not reproduce model_cv.csv"
 save("r1_model_sensitivity.csv", ms)
 
-# residual semivariogram (subsample for the pair count), exponential model with nugget
 rng = np.random.default_rng(cfg.seed)
 pick = rng.choice(len(y), size=min(5000, len(y)), replace=False)
 kx = 111.32 * np.cos(np.radians(train["lat"].mean()))
@@ -193,7 +186,6 @@ vg["practical_range_km"] = a
 vg["nugget_C2"], vg["partial_sill_C2"] = nug, sill
 save("r1_variogram.csv", vg)
 
-# ---------------------------------------------------------------- M7: NEGI weights on measured contrasts
 trd = pd.read_csv(ROOT / "tables_revision_v11" / "tradeoff_illustration_v11.csv")
 rows = []
 for _, rr in trd.iterrows():
@@ -204,7 +196,6 @@ for _, rr in trd.iterrows():
                          "p": p, "alpha_over_beta": ratio, "negi_beta1": ratio * rr.normalized_benefit - cost})
 save("r1_negi_weights.csv", pd.DataFrame(rows))
 
-# ---------------------------------------------------------------- M5: populations
 trA = model.training_set(df)
 rows = [{"item": f"Model A training cells, group {g_}", "value": int(n)} for g_, n in trA.group.value_counts().items()]
 rows += [{"item": "Model A training cells, total", "value": len(trA)},

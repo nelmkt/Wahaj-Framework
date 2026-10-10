@@ -54,14 +54,12 @@ def candidates(df,M,R,V,cfg):
             supported=M.supported(treated)&M.supported(treated,ndvi=treated.ndvi_pre,ndbi=treated.ndbi_pre)
             treated=treated[supported]
             if len(treated)<=cfg.support_k: continue
-            # A real paired observed transition, closest to the multivariate median within this supported dose.
             cols=["ndvi_pre","ndbi_pre","ndvi_post","ndbi_post","n_greened_px"]
             scale=treated[cols].std().replace(0,1)
             distance=(((treated[cols]-treated[cols].median())/scale)**2).sum(axis=1)
             target=treated.loc[distance.idxmin()]
             cand=df[(df.group=="control")&(df.setting==setting)&(df.d_own_built.abs()<cfg.stable_surface_max)]
             if not len(cand): continue
-            # Apply the paired observed change, not independent marginal medians.
             ndvi=cand.ndvi_post+(target.ndvi_post-target.ndvi_pre)
             ndbi=cand.ndbi_post+(target.ndbi_post-target.ndbi_pre)
             training_ok=M.supported(cand)&M.supported(cand,ndvi=ndvi,ndbi=ndbi)
@@ -131,7 +129,6 @@ def run(df,M,R,V,L,cfg):
         complete=np.isfinite(values).all(axis=1)&(values>0).all(axis=1)
         if complete.any():
             maxima=values[complete].max(axis=1,keepdims=True)
-            # Split exact ties. Shares are bootstrap frequencies, not posterior probabilities.
             wins=np.isclose(values[complete],maxima,rtol=1e-12,atol=0)
             shares=(wins/wins.sum(axis=1,keepdims=True)).mean(axis=0)
         else: shares=np.full(len(S),np.nan)

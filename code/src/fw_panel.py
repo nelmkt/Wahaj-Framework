@@ -10,9 +10,9 @@ from scipy.spatial import cKDTree
 
 from fw_config import SETTINGS, Config
 
-COASTLINE = Path(__file__).resolve().parent / "jeddah_coastline_ne10m.csv"   # Natural Earth 10 m, public domain
+COASTLINE = Path(__file__).resolve().parent / "jeddah_coastline_ne10m.csv"
 GROUPS = {1: "greened", 2: "ring", 3: "control", 4: "other"}
-PIXEL_HA = 0.09                    # one 30 m Landsat pixel
+PIXEL_HA = 0.09
 CELL_HA = 9 * PIXEL_HA
 
 
@@ -36,7 +36,7 @@ def _mean(df, var, years):
 def load(cfg: Config) -> tuple[pd.DataFrame, dict]:
     path = Path(cfg.panel_path)
     df = pd.read_csv(path)
-    if "lon" not in df and ".geo" in df:        # a Code Editor export to Drive stores the cell centre as GeoJSON
+    if "lon" not in df and ".geo" in df:
         xy = df[".geo"].map(lambda g: json.loads(g)["coordinates"])
         df["lon"], df["lat"] = xy.str[0], xy.str[1]
     meta_path = path.with_name(path.stem + "_meta.json")
@@ -60,13 +60,11 @@ def derive(df: pd.DataFrame, cfg: Config) -> pd.DataFrame:
     for per, yrs in (("pre", cfg.pre_years), ("mid", cfg.mid_years), ("post", cfg.post_years)):
         for v in ("ndvi", "ndbi", "lst", "emis"):
             df[f"{v}_{per}"] = _mean(df, v, yrs)
-    df["d_lst"] = df["lst_post"] - df["lst_pre"]                    # the outcome, °C
-    df["d_lst_mid"] = df["lst_mid"] - df["lst_pre"]                 # used by the placebo
+    df["d_lst"] = df["lst_post"] - df["lst_pre"]
+    df["d_lst_mid"] = df["lst_mid"] - df["lst_pre"]
     df["d_ndvi"] = df["ndvi_post"] - df["ndvi_pre"]
-    df["d_emis"] = df["emis_post"] - df["emis_pre"]             # emissivity the retrieval used, change
+    df["d_emis"] = df["emis_post"] - df["emis_pre"]
     df["emis_slope_per_001"] = emissivity_slope_K(df["lst_post"], df["emis_post"], cfg) * 0.01
-    # late greeners: every greened pixel of the cell was still unvegetated in 2018 and 2019, so 2014–15 → 2018–19 is
-    # before their greening
     df["late"] = (df["group"] == "greened") & (np.rint(df["late_frac"] * 9) == df["n_greened_px"])
     df["setting"] = np.where(df["ghsl_nb_2015"] >= cfg.builtup_min, SETTINGS[1], SETTINGS[0])
     coast = pd.read_csv(COASTLINE)
@@ -74,8 +72,6 @@ def derive(df: pd.DataFrame, cfg: Config) -> pd.DataFrame:
     df["d_own_built"] = df["built_post"] - df["built_pre"]
     df["d_nb_built"] = df["nb_built_post"] - df["nb_built_pre"]
     df["block"] = _grid_id(df, cfg.block_deg)
-    # the same random draw decided which control and other cells were exported, so rnd < sample_fraction across all
-    # groups is a representative sample of the study area
     df["in_sample"] = df["rnd"] < cfg.sample_fraction
     return df
 

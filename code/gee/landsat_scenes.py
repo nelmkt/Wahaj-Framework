@@ -42,13 +42,12 @@ import pandas as pd
 COLLECTIONS = {"LC08": "LANDSAT/LC08/C02/T1_L2", "LC09": "LANDSAT/LC09/C02/T1_L2"}
 BANDS = ["ST_B10", "ST_EMIS", "ST_EMSD", "SR_B4", "SR_B5", "SR_B6", "QA_PIXEL"]
 SCENE_COLS = ["LST", "NDVI", "NDBI", "ST_EMIS", "ST_EMSD"]
-MASKS = {"none": (), "cloud": (3,), "cloud+shadow": (3, 4), "full": (1, 2, 3, 4)}   # QA_PIXEL bits masked out
+MASKS = {"none": (), "cloud": (3,), "cloud+shadow": (3, 4), "full": (1, 2, 3, 4)}
 SENSOR_SETS = {"LC08,LC09": ("LC08", "LC09"), "LC08": ("LC08",), "LC09": ("LC09",)}
 INDEX_MODES = ("index-of-median-scaled", "median-of-index-scaled", "index-of-median-dn", "median-of-index-dn")
 ST_SCALE, ST_OFFSET_K = 0.00341802, 149.0
 
 
-# ---------------------------------------------------------------- pure functions (tested without Earth Engine)
 def lst_counts(lst_c) -> np.ndarray:
     """LST in °C -> Landsat C2 L2 ST_B10 counts (whole for one scene, half-counts for a median of an even number)."""
     return (np.asarray(lst_c, float) + 273.15 - ST_OFFSET_K) / ST_SCALE
@@ -79,7 +78,7 @@ def _ratio(a, b):
 def indices(r, n, w, scaling: str):
     if scaling == "scaled":
         r, n, w = (x * 0.0000275 - 0.2 for x in (r, n, w))
-    return _ratio(n, r), _ratio(w, n)          # NDVI, NDBI
+    return _ratio(n, r), _ratio(w, n)
 
 
 def derive(s: pd.DataFrame, index_scaling: str = "scaled", mask: str = "full") -> pd.DataFrame:
@@ -154,7 +153,6 @@ def coords(df: pd.DataFrame) -> tuple[str, str]:
     return lon, lat
 
 
-# ---------------------------------------------------------------- Earth Engine
 def _init(project):
     try:
         import ee
@@ -215,7 +213,7 @@ def identify(a):
     meta = col.reduceColumns(ee.Reducer.toList(4), ["system:index", "DATE_ACQUIRED", "CLOUD_COVER", "SCENE_CENTER_TIME"]
                              ).get("list").getInfo()
     meta = pd.DataFrame(meta, columns=["id", "date", "cloud_cover", "time_utc"])
-    meta["id"] = meta["id"].str.replace(r"^\d+_", "", regex=True)       # merged collections prefix the index
+    meta["id"] = meta["id"].str.replace(r"^\d+_", "", regex=True)
     meta = meta.sort_values(["date", "id"]).reset_index(drop=True)
     print(f"{len(meta)} Landsat 8/9 scenes over the study area, {a.year - 1}-10 to {a.year + 1}-03; "
           f"sampling {len(pts)} of your pixels in each.")
@@ -272,11 +270,6 @@ def _masked(ee, img, mask: str, radsat: bool = False):
     return img.updateMask(img.select("QA_RADSAT").eq(0)) if radsat else img
 
 
-# The recipe of the script that built Jeddah_LST_Dataset_2023_raw.csv ("dataset builder — v5",
-# https://code.earthengine.google.com/dee2dbb357ddf21c825e3a458c6271b5), checked to reproduce the CSV exactly:
-# Landsat 8 C2 L2 only, scene CLOUD_COVER < 20, per-scene mask of dilated cloud/cirrus/cloud/shadow and
-# radiometric saturation, NDVI/NDBI from scaled reflectance per scene, then the per-pixel median of everything.
-# filterDate("YYYY-01-01", "YYYY-12-31") — the end date is exclusive, so 31 December is left out.
 RECIPES = {"v5": dict(sensors="LC08", mask="full", radsat=True, max_cloud=20.0, index="median-of-index-scaled")}
 
 
@@ -305,9 +298,9 @@ def export_composite(a):
     if a.recipe:
         for k, v in RECIPES[a.recipe].items():
             setattr(a, k, v)
-        region = ee.Geometry.Rectangle([39.0, 21.2, 39.4, 21.8])          # the v5 script's filterBounds
+        region = ee.Geometry.Rectangle([39.0, 21.2, 39.4, 21.8])
     if a.year:
-        a.start, a.end = f"{a.year}-01-01", f"{a.year}-12-30"                # as filterDate(Y-01-01, Y-12-31)
+        a.start, a.end = f"{a.year}-01-01", f"{a.year}-12-30"
     if not (a.start and a.end):
         sys.exit("give --year, or --start and --end")
     end_excl = (pd.Timestamp(a.end) + pd.Timedelta(days=1)).strftime("%Y-%m-%d")

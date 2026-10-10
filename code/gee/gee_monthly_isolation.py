@@ -36,12 +36,6 @@ def build_diagnostics(ee, panel_image, cell, greened):
     green30 = greened.unmask(0).toFloat().rename("green30").reproject(proj30)
 
     def sum90(image, name):
-        # reduceResolution weights the nine 30 m source pixels by their share
-        # of the 90 m output pixel (Earth Engine resample guide). The old sum
-        # path exported only 0/1 rather than the source panel's 1–9 doses:
-        # every saved dose 1–4 became zero and 5–9 became one. Float mean × 9
-        # is the intended 3×3 count on this aligned Landsat grid; the
-        # mandatory panel-agreement check below decides whether it worked.
         return (image.toFloat().reproject(proj30)
                 .reduceResolution(reducer=ee.Reducer.mean(), maxPixels=64)
                 .reproject(cell).multiply(9).rename(name))
@@ -52,10 +46,6 @@ def build_diagnostics(ee, panel_image, cell, greened):
         kernel=ee.Kernel.square(radius=1, units="pixels", normalize=False),
         skipMasked=False,
     ).subtract(green_cell).max(0).rename("green_count_8_neighbor_cells")
-    # Force the neighborhood reduction itself onto the native 30 m grid.
-    # Reprojecting it directly to 90 m made Earth Engine request its inputs at
-    # 90 m, yielding a 300 m count smaller than the eight immediate 90 m
-    # neighbors in 472 saved cells. Earth Engine computes scale on a pull basis.
     around300_30 = green30.reduceNeighborhood(
         reducer=ee.Reducer.sum(),
         kernel=ee.Kernel.circle(radius=300, units="meters", normalize=False),
@@ -128,8 +118,6 @@ def main():
         raise SystemExit("No classified greened cells returned; no output written.")
     args.out.parent.mkdir(parents=True, exist_ok=True)
     data.to_csv(args.out, index=False, float_format="%.6f")
-    # Preserve the raw export, but never label it an interpretable isolation
-    # result until its own-cell count agrees with the unchanged source panel.
     source_panel = pd.read_csv(ROOT / "code" / "gee" / "panel.csv")
     source_green = source_panel.loc[source_panel.cls.eq(1), ["lon", "lat", "greened_frac"]].copy()
     source_green["lon_key"] = source_green.lon.round(6)
@@ -139,8 +127,6 @@ def main():
         on=["lon_key", "lat_key"], how="left", validate="one_to_one")
     n_disagree = int((check.green_count_cell - (check.greened_frac * 9).round()).abs().gt(.25).sum())
     n_unjoined = int(check.greened_frac.isna().sum())
-    # All pixels in the eight neighboring 90 m cells lie within 300 m of
-    # the centre. A 30 m neighborhood count must contain at least that many.
     n_neighbor_order_violations = int((
         check.green_count_8_neighbor_cells - check.green_count_other_within_300m_center
     ).gt(.25).sum())

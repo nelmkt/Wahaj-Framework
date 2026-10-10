@@ -19,7 +19,7 @@ def test_zero_external_exposure_reproduces_own_area_ratio_and_mixing_reference()
         df[f"external_green_px_{radius}m"] = 0.0
         df[f"combined_green_px_{radius}m"] = df.n_greened_px.astype(float)
     ratios = ratio_table(df, cfg)
-    assert len(ratios) == 21  # Seven displayed Figure 5a options at three radii.
+    assert len(ratios) == 21
     assert np.allclose(ratios.ratio_multiplier, 1)
     assert np.allclose(ratios.old_fig5a_m3_year_per_C,
                        ratios.combined_footprint_m3_year_per_C)

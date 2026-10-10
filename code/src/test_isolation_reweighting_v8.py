@@ -9,8 +9,6 @@ from analyze_isolation_reweighting_v8 import entropy_weights, interval, moments,
 
 class IsolationReweightingTests(unittest.TestCase):
     def test_entropy_weights_match_joint_moments_without_duplicate_collapse(self):
-        # A full factorial grid has known support for linear, quadratic, and
-        # interaction terms.  The target is a tilted version of the same grid.
         grid = np.array(np.meshgrid([-1.0, 0.0, 1.0],
                                     [-1.0, 0.0, 1.0],
                                     [-1.0, 0.0, 1.0])).reshape(3, -1).T

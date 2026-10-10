@@ -37,7 +37,7 @@ def make(n_control=8000, n_ring=900, n_greened=900, n_other=3000, seed=0) -> tup
         elev = rng.uniform(0, 60, n)
         emis0 = rng.uniform(0.95, 0.975, n)
         base = 45 + 0.05 * elev + 2.0 * (lon - 39.1) * 10 + rng.normal(0, 1.0, n)
-        veg0 = rng.uniform(0.0, 0.5, n) * (cls == 4)          # other cells: existing vegetation, fixed over time
+        veg0 = rng.uniform(0.0, 0.5, n) * (cls == 4)
         d = {"rnd": rng.uniform(0, 0.1, n) if cls in (3, 4) else rng.uniform(0, 1, n), "lon": lon, "lat": lat, "cls": cls, "greened_frac": n_px / 9, "never_frac": np.full(n, float(cls != 1)),
              "built_pre": built_pre, "built_post": built_post, "nb_built_pre": nb_pre, "nb_built_post": nb_post,
              "elev": elev, "ghsl_2015": ghsl_own, "ghsl_nb_2015": ghsl_nb, "pre_bare_frac": np.ones(n),
@@ -46,7 +46,7 @@ def make(n_control=8000, n_ring=900, n_greened=900, n_other=3000, seed=0) -> tup
             frac_dev = {2014: 0, 2015: 0, 2018: 0.3, 2019: 0.4, 2024: 1, 2025: 1}[y]
             green_on = np.where(late, y >= 2024, y >= 2018) & (cls == 1)
             ndvi = 0.08 + veg0 + rng.normal(0, 0.02, n) + green_on * 0.5 * n_px / 9
-            emis = emis0                          # the product keeps each pixel's emissivity fixed
+            emis = emis0
             lst = (base + (y - 2014) * 0.05 + dev * DEV_WARMING * frac_dev + green_on * TRUE_FULL * n_px / 9
                    + TRUE_FULL / 0.5 * veg0
                    + (cls == 2) * (y >= 2024) * TRUE_RING + rng.normal(0, 0.6, n))

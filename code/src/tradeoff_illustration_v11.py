@@ -29,7 +29,7 @@ OUT = ROOT / "tables_revision_v11" / "tradeoff_illustration_v11.csv"
 if OUT.exists():
     raise SystemExit(f"Refusing to overwrite {OUT}")
 
-ALPHA, BETA, P_DEFAULT, P_ALT = 1.0, 1.0, 0.5, 1.0     # code/negi_original/NEGI_Framework.py:745-750
+ALPHA, BETA, P_DEFAULT, P_ALT = 1.0, 1.0, 0.5, 1.0
 SWRO, TSE = "desalinated seawater (SWRO)", "treated wastewater"
 SETTING = "outside the built-up area"
 

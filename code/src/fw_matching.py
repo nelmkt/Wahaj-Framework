@@ -221,7 +221,6 @@ def _one_setting(df, s, key, cfg, boot):
         dose.append({"pixels": f"{lo}–{hi}" if lo != hi else f"{lo}", **r,
                      "d_ndvi": att(df, Tb, C, "d_ndvi", key, cfg, None)["estimate_C"]})
     out["dose"] = pd.DataFrame(dose)
-    # per greened pixel by distance to the coast: where does greening cool more?
     band = pd.Series(coast_band(df["coast_km"], cfg).to_numpy(), index=df.index)
     coast = []
     for b in coast_band([0.0], cfg).cat.categories:
@@ -234,10 +233,10 @@ def _one_setting(df, s, key, cfg, boot):
             continue
         coast.append({"coast_band": b, **r, "mean_px": float(df.loc[Tb, "n_greened_px"].mean())})
     out["by_coast"] = pd.DataFrame(coast)
-    out["reps"] = reps                        # bootstrap draws, used by the model test (not written to tables)
-    out["replicate_ids"] = boot.replicate_ids.copy()  # full draw positions, including non-finite draws in reps
+    out["reps"] = reps
+    out["replicate_ids"] = boot.replicate_ids.copy()
     out["treated"] = T
-    out["controls"], out["key"] = C, key       # used by the model test to compare cell by cell
+    out["controls"], out["key"] = C, key
     out["balance"] = balance(df, T, C, key, cfg)
     out["yearly"] = yearly(df, T, C, key, cfg, boot)
     out["weights"] = control_weights(df, T, C, key, cfg)

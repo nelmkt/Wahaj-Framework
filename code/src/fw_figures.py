@@ -66,7 +66,6 @@ def fig_sample(df: pd.DataFrame, used_controls: pd.Series, out: Path, stable_max
     """a: where the cells are; b: how many greened cells, by setting and by greened pixels per cell."""
     fig, (a, b) = plt.subplots(1, 2, figsize=(11, 5.6), gridspec_kw={"width_ratios": [1, 1.2], "wspace": 0.3})
     coast = pd.read_csv(COASTLINE)
-    # Plot all four GEE panel classes, then highlight the actual primary donors.
     palette = ((4, "#d3e8f0", "4 other land: random 10%"),
                (3, "#d5d9dd", "3 never green: random 10%"),
                (2, "#f6d6bb", "2 ring: ≤150 m"),
@@ -78,7 +77,6 @@ def fig_sample(df: pd.DataFrame, used_controls: pd.Series, out: Path, stable_max
     ctrl = df[used_controls & df.cls.eq(3)]
     a.scatter(ctrl.lon, ctrl.lat, s=1.8, c="#455a64", alpha=0.65, lw=0,
               label=f"matched controls, {match_label} ({len(ctrl):,})", rasterized=True)
-    # Keep treated locations legible above the many sampled matched donors.
     green = df[df.cls.eq(1)]
     a.scatter(green.lon, green.lat, s=3.5, c="#a7d7ad", lw=0,
               label="_nolegend_", rasterized=True)

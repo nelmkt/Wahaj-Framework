@@ -38,7 +38,6 @@ def main():
     controls, key = rs["controls"], rs["key"]
     boot = matching.Bootstrap(df.block, cfg.n_boot, cfg.seed)
 
-    # Terciles refer to the late-greeners that enter the primary matched placebo.
     late = matched & df.late
     assert int(late.sum()) == 289
     terciles, edges = pd.qcut(df.loc[late, "lst_pre"], 3, labels=["cooler", "middle", "hotter"], retbins=True)

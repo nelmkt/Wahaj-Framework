@@ -23,9 +23,9 @@ MONTHS = (5, 6, 7, 8, 9)
 RECT = [39.0, 21.2, 39.4, 21.8]
 CELL_M = 90
 CONTROL_FRACTION = 0.10
-GHSL_2015 = "JRC/GHSL/P2023A/GHS_BUILT_S/2015"   # built-up surface, 100 m, epoch 2015 (before the greening)
-TILES = (4, 6)              # lon x lat tiles, so each request stays under Earth Engine's 5,000-feature limit
-DW_PRE = ("2015-06-01", "2015-10-01")   # Dynamic World starts June 2015; this is inside the "before" period
+GHSL_2015 = "JRC/GHSL/P2023A/GHS_BUILT_S/2015"
+TILES = (4, 6)
+DW_PRE = ("2015-06-01", "2015-10-01")
 DW_POST = ("2024-05-01", "2025-10-01")
 NB_RADIUS_M = 500
 
@@ -59,7 +59,6 @@ def build(ee):
         ndbi = o.normalizedDifference(["SR_B6", "SR_B5"]).rename("NDBI")
         lst = img.select("ST_B10").multiply(0.00341802).add(149.0).subtract(273.15).rename("LST")
         emis = img.select("ST_EMIS").multiply(0.0001).rename("EMIS")
-        # keep the acquisition time, or the per-year/per-month filters below would find nothing
         return ee.Image(ee.Image.cat([ndvi, ndwi, ndbi, lst, emis]).updateMask(m).copyProperties(img, ["system:time_start"]))
 
     cp = col.map(prep)
@@ -92,8 +91,6 @@ def build(ee):
 
     built_pre = to30(dw.filterDate(*DW_PRE).mean()).rename("built_pre")
     built_post = to30(dw.filterDate(*DW_POST).mean()).rename("built_post")
-    # surroundings: mean built-up probability within NB_RADIUS_M, greened pixels left out so a cell's own greening
-    # (or its neighbours') never enters the description of how its surroundings developed
     not_green = greened.unmask(0).Not()
     kern = ee.Kernel.circle(NB_RADIUS_M, "meters")
     nb_pre = built_pre.updateMask(not_green).reduceNeighborhood(reducer=ee.Reducer.mean(), kernel=kern,
@@ -101,12 +98,11 @@ def build(ee):
     nb_post = built_post.updateMask(not_green).reduceNeighborhood(reducer=ee.Reducer.mean(), kernel=kern,
                                                                   skipMasked=False).reproject(proj30).rename("nb_built_post")
     elev = ee.Image("USGS/SRTMGL1_003").rename("elev")
-    # setting before the greening: share of the ground covered by buildings in 2015, in the cell and within 500 m
     gh = ee.Image(GHSL_2015).select("built_surface").divide(1e4)
     ghsl_own = gh.reproject(proj30).rename("ghsl_2015")
     ghsl_nb = gh.reduceNeighborhood(reducer=ee.Reducer.mean(), kernel=kern).reproject(proj30).rename("ghsl_nb_2015")
     pre_bare = nd[2014].lt(0.15).And(nd[2015].lt(0.15)).And(ok).unmask(0).rename("pre_bare_frac")
-    late = greened.And(nd[2018].lt(0.15)).And(nd[2019].lt(0.15)).unmask(0).rename("late_frac")   # greened after 2019
+    late = greened.And(nd[2018].lt(0.15)).And(nd[2019].lt(0.15)).unmask(0).rename("late_frac")
 
     bands30 = [greened.unmask(0).rename("greened_frac"), never.unmask(0).rename("never_frac"), pre_bare, late,
                ok.unmask(0).rename("dry_frac")]
@@ -114,7 +110,7 @@ def build(ee):
         bands30 += [comps[y].select("NDVI").rename(f"ndvi_{y}"), comps[y].select("LST").rename(f"lst_{y}"),
                     comps[y].select("EMIS").rename(f"emis_{y}"), comps[y].select("NDBI").rename(f"ndbi_{y}")]
     stack30 = ee.Image.cat(bands30 + [built_pre, built_post, nb_pre, nb_post, ghsl_own, ghsl_nb, elev]).reproject(proj30)
-    cell = proj30.scale(3, 3)          # 90 m cells on the Landsat pixel grid: each holds exactly 3 x 3 pixels
+    cell = proj30.scale(3, 3)
     mean90 = stack30.reduceResolution(ee.Reducer.mean(), maxPixels=1024).reproject(cell)
     dmin = dist.reproject(proj30).reduceResolution(ee.Reducer.min(), maxPixels=64).reproject(cell)
     g, nv = mean90.select("greened_frac"), mean90.select("never_frac")
@@ -122,8 +118,6 @@ def build(ee):
     cls = (ee.Image(0).where(nv.eq(1).And(dmin.gt(300)).And(rnd.lt(CONTROL_FRACTION)), 3)
            .where(nv.eq(1).And(dmin.lte(150)), 2)
            .where(g.gte(1 / 9 - 1e-6).And(mean90.select("pre_bare_frac").gte(1 - 1e-6)), 1)).rename("cls").reproject(cell)
-    # a random 10% of every other land cell (existing green, built, mixed), so that the draw rnd < CONTROL_FRACTION
-    # over all classes is a representative sample of the whole study area
     cls = cls.where(cls.eq(0).And(rnd.lt(CONTROL_FRACTION)).And(mean90.select("dry_frac").gte(1 - 1e-6)), 4).rename("cls")
     out = mean90.addBands(dmin).addBands(cls).addBands(rnd.rename("rnd")).updateMask(cls.gt(0)).clip(land)
     return out, land, cell, counts, greened
@@ -167,7 +161,6 @@ def main():
     meta = {"years": YEARS, "months": MONTHS, "cell_m": CELL_M, "control_fraction": CONTROL_FRACTION,
             "sensor": "LANDSAT/LC08/C02/T1_L2, CLOUD_COVER < 20",
             "scenes_per_year_month": ee.Dictionary({f"{y}-{m:02d}": n for (y, m), n in counts.items()}).getInfo()}
-    # reference evapotranspiration over the greened land (TerraClimate pet, mm/month x 0.1)
     tc = ee.ImageCollection("IDAHO_EPSCOR/TERRACLIMATE").select("pet")
     area = greened.selfMask().reduceToVectors(geometry=land, scale=300, maxPixels=1e10, geometryType="centroid").geometry()
 
@@ -182,7 +175,7 @@ def main():
         if n != 12:
             print(f"  TerraClimate has {n} months for {y}; that year is left out of reference ET")
     if not any(v for v in pet.values()):
-        pet = {str(y): annual(y) for y in (2022, 2023)}      # when the most recent years are not yet published
+        pet = {str(y): annual(y) for y in (2022, 2023)}
     meta["reference_et_mm_per_year"] = pet
     meta["reference_et_source"] = "IDAHO_EPSCOR/TERRACLIMATE pet (Penman-Monteith reference ET), mean over greened land"
     ga = greened.selfMask().multiply(ee.Image.pixelArea()).reduceRegion(ee.Reducer.sum(), land, crs=greened.projection(),

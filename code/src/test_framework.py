@@ -34,7 +34,7 @@ def test_measured_recovers_known_effect(data):
         assert abs(e["estimate_C"] - sp.TRUE_FULL / 9) < 0.03, st
     T, C = df.group == "greened", df.group == "control"
     naive = ((df.loc[T, "d_lst"] - df.loc[C, "d_lst"].mean()) * df.loc[T, "n_greened_px"]).sum() / (df.loc[T, "n_greened_px"] ** 2).sum()
-    assert abs(naive - sp.TRUE_FULL / 9) > 0.03                  # the confounding the matching has to remove is real
+    assert abs(naive - sp.TRUE_FULL / 9) > 0.03
 
 
 def test_placebo_and_spillover(data):
@@ -73,7 +73,7 @@ def test_wrong_model_fails(tmp_path):
     df0, meta = sp.make()
     veg = df0["cls"] == 4
     for y in sp.YEARS:
-        df0.loc[veg, f"lst_{y}"] += sp.TRUE_FULL / 0.5 * (df0.loc[veg, f"ndvi_{y}"] - 0.08)   # doubles their slope
+        df0.loc[veg, f"lst_{y}"] += sp.TRUE_FULL / 0.5 * (df0.loc[veg, f"ndvi_{y}"] - 0.08)
     p = tmp_path / "panel.csv"
     df0.to_csv(p, index=False)
     (tmp_path / "panel_meta.json").write_text(__import__("json").dumps(meta))

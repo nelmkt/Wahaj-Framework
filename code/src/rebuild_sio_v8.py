@@ -107,7 +107,7 @@ def build(area: pd.DataFrame, supply: pd.DataFrame, old: pd.DataFrame):
                           on=["year", "branch_key"], how="left", validate="one_to_one")
     joined["depth_difference_m"] = joined.depth_m - joined.old_depth_m
     joined["same_branch_year_units"] = can_depth
-    joined["in_named_jeddah_makkah_branch"] = False  # Neither name occurs in either original workbook.
+    joined["in_named_jeddah_makkah_branch"] = False
     valid = joined[can_depth].copy()
     if len(valid) != len(old) or valid.old_depth_m.isna().any():
         raise ValueError("New and saved branch-year populations differ; inspect audit before use")
@@ -119,7 +119,7 @@ def build(area: pd.DataFrame, supply: pd.DataFrame, old: pd.DataFrame):
     result = valid[["year", "branch", "area_label", "total_area_ha", "irrigated_area_ha",
                     "reclaimed_m3", "groundwater_m3", "agri_drainage_m3"]].rename(columns={"area_label": "branch_ar"})
     for field in ("reclaimed_m3", "groundwater_m3", "agri_drainage_m3"):
-        result[field] = result[field].replace(0, np.nan)  # Preserve no-flow as blank in the compatibility CSV.
+        result[field] = result[field].replace(0, np.nan)
     return result, joined
 
 

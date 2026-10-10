@@ -53,7 +53,6 @@ def matched_rows(df: pd.DataFrame, cfg: Config, panel_name: str) -> list[dict]:
 
 
 def paired_rows(old: pd.DataFrame, new: pd.DataFrame, cfg: Config) -> tuple[list[dict], pd.DataFrame]:
-    # The original panel owns class, dose, key and control eligibility.
     keep = ["lon", "lat", "group", "d_lst"] + [f"lst_{y}" for y in (2014, 2015, 2018, 2019, 2024, 2025)]
     linked = old.merge(new[keep], on=["lon", "lat"], how="inner", validate="one_to_one",
                        suffixes=("_old", "_new"))

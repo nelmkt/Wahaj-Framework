@@ -118,9 +118,6 @@ def _classified_image(ee, panel_image, cell, greened, proj30):
 
 
 def _fetch_projected(image, sampling_projection, region):
-    # Geometry is used only to join classified 90 m cells to the saved panel.
-    # The integer grid IDs come from pixelCoordinates bands, never from
-    # rounded/transformed feature geometries (which failed the first live run).
     return image.sample(region=region, projection=sampling_projection,
                         geometries=True, tileScale=16).getInfo()["features"]
 
@@ -133,7 +130,6 @@ def _classified_tile(ee, image, land, cell, proj30, box):
 
 
 def _pixel_tile(ee, image, proj30, box, depth=0):
-    # The buffer covers every point <=300 m from an own pixel near a tile edge.
     region = ee.Geometry.Rectangle(box).buffer(360, ee.ErrorMargin(1))
     try:
         features = _fetch_projected(image, proj30, region)
@@ -158,7 +154,7 @@ def _catalogue(rows):
         if xy in pixels:
             if pixels[xy] != parent:
                 raise ValueError("Duplicate native pixel has conflicting parent-cell IDs")
-            continue  # Overlapping buffered export tiles; the pixel counts once.
+            continue
         pixels[xy] = parent
         own_by_cell[parent].append(xy)
     return pixels, own_by_cell
@@ -260,8 +256,6 @@ def main():
         part = _classified_tile(ee, classified_image, land, cell, proj30, box)
         cells.extend(part)
         natives = _pixel_tile(ee, native_image, proj30, box)
-        # Fail at the first populated tile if EE uses an unexpected coordinate
-        # convention; do not spend time fetching all 24 tiles before finding it.
         if part:
             center_index(part[0]["cell_x"], "classified cell_x")
             center_index(part[0]["cell_y"], "classified cell_y")

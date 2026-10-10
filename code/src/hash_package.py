@@ -13,7 +13,6 @@ def entries():
         for path in sorted((ROOT / folder).rglob("*")):
             if not path.is_file():
                 continue
-            # The queue key remains sealed: inventory its filename without reading it.
             if path != MANIFEST and path != BLINDED_KEY:
                 yield f"{hashlib.sha256(path.read_bytes()).hexdigest()}  {path.relative_to(ROOT).as_posix()}"
 

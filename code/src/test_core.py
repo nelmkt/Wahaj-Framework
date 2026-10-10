@@ -43,7 +43,6 @@ def option(oid,site,cool,water,tse,cost):
 
 def test_allocator_uses_cap_and_mutually_exclusive_alternatives(tmp_path):
     p=tmp_path/"options.csv"
-    # A high-benefit but unavailable wastewater option must not displace the feasible combination.
     pd.DataFrame([option("A-tse","A",100,8,8,3),option("A-shade","A",5,0,0,2),
                   option("B-green","B",6,5,0,3)]).to_csv(p,index=False)
     cfg=dataclasses.replace(Config(),allocation_path=p,water_budget_m3=5,wastewater_cap_m3=0,

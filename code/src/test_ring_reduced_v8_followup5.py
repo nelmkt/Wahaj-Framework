@@ -28,7 +28,6 @@ class ReducedRingTests(unittest.TestCase):
             model_design(np.ones(1), np.array([3.]), np.array([2.]), np.array([4.]))
 
     def test_unique_subrings_count_external_pixel_once(self):
-        # The external pixel at (1, 1) is near both own pixels, but counts once.
         own = [(0, 0), (0, 1)]
         pix = {own[0]: "cell", own[1]: "cell",
                (1, 1): "other", (2, 0): "other", (3, 0): "other"}

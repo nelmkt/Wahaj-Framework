@@ -11,7 +11,7 @@ import fw_matching as matching, fw_panel as panel, fw_model as model
 from fw_config import SETTINGS
 
 BASE=["lst_pre","ndvi_pre","ndbi_pre","emis_pre","coast_km","elev","ghsl_2015","ghsl_nb_2015"]
-BALANCE=BASE+["d_nb_built","lon","lat"]  # post-period development is diagnostic only in DR
+BALANCE=BASE+["d_nb_built","lon","lat"]
 CALIPER=["lst_pre","ndvi_pre","elev"]
 
 def interval(draws):
@@ -138,7 +138,6 @@ def dr_panel(y,D,X):
     gb=np.mean((cw-tw)[:,None]*X,axis=0)
     gg=-np.mean((cw*(resid-muC))[:,None]*X,axis=0)
     influence=tw*(resid-muT)-cw*(resid-muC)+ifbeta@gb+ifgamma@gg
-    # Outcome-regression ATT, with its own nuisance influence.
     outcome=np.mean(D*(y-X@beta))/D.mean()
     orinf=tw*(resid-outcome)-ifbeta@np.mean(tw[:,None]*X,axis=0)
     return dict(estimate=muT-muC,or_estimate=outcome,influence=influence,or_influence=orinf,
@@ -152,7 +151,6 @@ def dr_design(d):
     extra=np.column_stack([Z[:,0]**2,Z[:,1]**2])
     regions=pd.get_dummies(panel._grid_id(d,.1),drop_first=True,dtype=float).to_numpy()
     X=np.column_stack([np.ones(len(d)),Z,extra,regions])
-    # Remove any constant columns except intercept.
     return X[:,np.r_[True,np.std(X[:,1:],axis=0)>1e-10]]
 
 def matching_sensitivity(df,R,cfg,boot):

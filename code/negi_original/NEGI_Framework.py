@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-# STANDARD LIBRARY
 import dataclasses
 import datetime
 import gc
@@ -17,18 +16,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Callable, Optional
 
-# Third-party imports
 import matplotlib as mpl
-# Force a non-interactive backend BEFORE importing pyplot. This pipeline
-# never calls plt.show() - every figure is written to disk via save_fig()
-# (fig.savefig(...)). Without this, matplotlib defaults to the interactive
-# TkAgg backend on Windows (since tkinter is present), which spins up real
-# Tk windows for every figure. Combined with joblib.Parallel's worker
-# threads/processes, those Tk objects get garbage-collected from the wrong
-# thread at interpreter shutdown, producing the
-# "RuntimeError: main thread is not in main loop" / "Tcl_AsyncDelete"
-# errors on exit. "Agg" is headless, faster, and thread-safe for this
-# save-only workflow.
 mpl.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
@@ -57,158 +45,12 @@ from sklearn.neighbors import NearestNeighbors
 from sklearn.preprocessing import SplineTransformer, StandardScaler
 from xgboost import XGBRegressor
 
-# ============================================================================
-# ENGINEERING-REFINEMENT NOTES (publication-readiness pass)
-# ============================================================================
-# The additions summarized here are reporting/packaging improvements only.
-# No scientific calculation, model-fitting procedure, validation fold,
-# residual/calibration/benchmark computation, or exported numerical value
-# was changed by this pass - see the docstrings at each referenced symbol
-# for the full rationale.
-#
-#   * Cache reporting  - run_or_cached_stage(..., step_label=...) now
-#     prints an explicit "(cache hit)" / "(computed)" status line plus a
-#     consistently-formatted elapsed-time line for every cacheable stage.
-#   * Run modes        - Config.run_mode ("development" | "publication")
-#     gates whether temporary developer diagnostics (per-substep [TIMING]
-#     lines, prediction-cache hit/miss counters) reach the console/log.
-#     Publication mode suppresses them; it changes no computed result.
-#   * Run manifest     - build_and_export_run_manifest() writes
-#     run_manifest.json (timestamp, config/dataset/git hashes, software
-#     versions, seeds, run_mode, pipeline_version, per-stage cache status)
-#     beside the other Data/ exports, for machine-readable provenance.
-#   * Endpoint export  - the scenario-export section of main() also writes
-#     scenario_endpoint_diagnostics.json: a read-out (not a recomputation)
-#     of the final scenario-trajectory point's position, NDVI, predicted
-#     LST, NEGI, uncertainty interval, feature support, and interpretation.
-#   * QA summary       - run_qa_checks() now also exports qa_summary.json
-#     (pass/fail counts and names) and returns it, so regression tests can
-#     assert "QA count is unchanged" without parsing console output.
-#   * Unit tests        - test_negi_equation.py: deterministic tests of the
-#     NEGI formula's building blocks (_energy_cost / _energy_norm /
-#     compute_negi_results) - zero cooling, zero cost, zero benefit,
-#     benefit==cost, monotonicity, scaling invariance, clipping, exponent
-#     behaviour, baseline scenario, and an extreme-input scenario. These
-#     import the real functions from this module; they do not re-implement
-#     or alter the NEGI formulation.
-#   * Regression tests  - test_negi_regression.py: compares a completed
-#     run's exported artifacts (validation metrics, calibration slope,
-#     Scenario 2 maximum position, QA count, presence of expected export
-#     files) against stored reference values in
-#     regression_reference.json, within configurable tolerances.
-# ============================================================================
 
-# ============================================================================
-# BUG FIX (changes computed Scenario 2 values - NOT a reporting-only change)
-# ============================================================================
-# build_scenario2_empirical_trajectory() previously anchored Scenario 2's
-# own "0% intervention" point to the nearest pixel to the MEDIAN of the
-# CUMULATIVE bottom-half-by-NDBI subset (via _empirical_cumulative_bin_stats),
-# rather than to the actual (baseline_ndvi, baseline_ndbi) baseline used
-# for baseline_lst and Scenario 1. Because NDVI and NDBI are anti-correlated,
-# that cumulative-subset median was systematically greener/less built-up
-# than the true baseline, so Scenario 2's "0%" point already predicted
-# real cooling benefit (confirmed empirically: NDBI~0.055 vs the true
-# median of ~0.083, ~2.1 degC of the ~4.2 degC max trajectory cooling
-# already "achieved" before any scenario intensity was applied). This
-# inflated every downstream Scenario 2 NEGI value, including the
-# most-visible "maximum evaluated NEGI" figure (previously ~0.50 AT THE
-# BASELINE, i.e. attributable to zero actual intervention).
-#
-# Fix: the trajectory's first bin is now pinned to the real baseline
-# point; every other bin (including the endpoint) is unchanged. See the
-# docstring of build_scenario2_empirical_trajectory() for full detail, and
-# the guard assertions immediately after the Scenario 1/2 evaluation loop
-# in run_scenario_trajectories() that confirm delta_t_s2[0] == 0 post-fix.
-#
-# CONSEQUENCE FOR DOWNSTREAM ARTIFACTS: Scenario 2's NEGI trajectory,
-# its evaluated maximum/position, its uncertainty bands, the percentile-
-# sensitivity table, and any cached results computed before this fix are
-# now stale and must be recomputed - clear PREDICTION_CACHE / any on-disk
-# scenario cache before the next run. regression_reference.json's stored
-# "Scenario 2 maximum position" value will also need updating to reflect
-# the corrected (no-longer-baseline-inflated) trajectory.
-# ============================================================================
 
-# ============================================================================
-# INTERPRETIVE CLARIFICATION (Figure 4 / Scenario 1 sign convention)
-# ============================================================================
-# Reporting/wording-only pass. No calculation, threshold, statistic, or
-# exported numerical value changes here - compute_negi_results() and its
-# inputs are untouched. This resolves an apparent contradiction between
-# Figure 6 (conditional NDVI-LST association) and the Scenario 1 NEGI
-# trajectory in Figure 4, which is a misreading risk rather than a real
-# inconsistency in the framework:
-#
-#   * negi_s1 is MAXIMIZED at the baseline (0% intervention, NEGI = 0) and
-#     DECREASES toward its floor as scenario intensity increases. That
-#     decline is not "cooling that increases" - delta_t_s1 (baseline_lst
-#     minus predicted_lst) is <= 0 across the isolated-NDVI trajectory
-#     because a fixed-NDBI NDVI increase is associated with warming, not
-#     cooling (see log_ndvi_causal_caveat() / Figure 6). The clipping
-#     transform max(delta_t_s1, 0) therefore holds the cooling-benefit
-#     term at exactly zero for every evaluated point, while the cost term
-#     (energy_norm_sqrt) climbs monotonically with scenario fraction. The
-#     descent to NEGI ~ -1 is pure accumulating cost against a
-#     benefit stuck at zero, not evidence of increasing cooling.
-#   * s1_optimum_idx (== argmax(negi_s1)) landing at index 0 is therefore
-#     a baseline argmax, not an identified intervention optimum - see the
-#     boundary-maximum guard in main() (s1_at_boundary) and
-#     interpretation_text("boundary_maximum") / the new
-#     interpretation_text("scenario1_sign_convention") entry below, both
-#     of which are now surfaced directly on Figure 4 (see
-#     plot_negi_scenario_comparison()) and not only in the console
-#     warning / summary log.
-#   * The Figure 4 axvline/annotation previously labeled the first point
-#     where delta_t_s2 > 0 as "First cooling (X%)" unconditionally. If
-#     that crossing were ever to fall at or before 0% intervention, "First
-#     cooling (0%)" is easy to misread as "the trajectory starts cooling
-#     immediately" when it is in fact the baseline, where Delta T = 0 by
-#     construction and no credited cooling has occurred. That edge case is
-#     now labeled "Baseline (no credited cooling)" instead, and the label
-#     is prefixed "Scenario 2" so it is not misattributed to the Scenario
-#     1 curve plotted on the same axes.
-#   * check_varying_coefficient_negi_relevance()'s load_bearing flag
-#     already establishes (see its own docstring/logged interpretation)
-#     that neither scenario trajectory visits the Figure 6 high-NDBI
-#     zero-crossing region, so that reversal remains a real feature of the
-#     fitted surface but is not decision-relevant to the NEGI comparison -
-#     no change was needed there.
-#
-# In short: Figures 4 and 6 were already numerically consistent; this pass
-# only makes that consistency legible on the figure and in the exported
-# interpretive text, per interpretation_text("scenario1_sign_convention").
-# ============================================================================
 
-# ============================================================================
-# FEATURE SCHEMA  (five-predictor model)
-# ============================================================================
-# Single source of truth for the predictive model's input columns. Every
-# fit, prediction frame, scenario frame, support diagnostic, cache key, and
-# report in this module reads from here - nothing below hard-codes a
-# feature count or column order.
-#
-# ROLES (kept explicit because they are different kinds of quantity):
-#   * NDVI, NDBI  - the ONLY scenario-manipulated features. Scenario 1 and
-#                   Scenario 2 move these along their trajectories.
-#   * Elevation, ST_EMIS, ST_EMSD - model predictors held FIXED at their
-#                   reference (training-partition median) values for every
-#                   scenario point. ST_EMIS / ST_EMSD (surface-emissivity
-#                   covariates) are NOT intervention variables: scenarios
-#                   never modify them. They enter the model so that
-#                   predicted LST is conditioned on emissivity, not so that
-#                   emissivity can be "intervened on".
-#
-# Column ORDER matters: XGBoost validates DataFrame column names/order at
-# predict time, and monotone_constraints is positional. FEATURES is
-# therefore the one ordering used to build X, every scenario frame, and
-# the constraint tuple.
 FEATURES: list[str] = ["NDVI", "NDBI", "Elevation", "ST_EMIS", "ST_EMSD"]
 SCENARIO_MANIPULATED_FEATURES: tuple[str, ...] = ("NDVI", "NDBI")
 FIXED_REFERENCE_FEATURES: tuple[str, ...] = ("Elevation", "ST_EMIS", "ST_EMSD")
-# NDBI is the only monotone-constrained predictor (increasing), exactly as
-# in the previous (0, 1, 0) three-feature constraint; the two emissivity
-# covariates are unconstrained.
 DEFAULT_MONOTONE_CONSTRAINTS: tuple[int, ...] = (0, 1, 0, 0, 0)
 
 assert list(SCENARIO_MANIPULATED_FEATURES) + list(FIXED_REFERENCE_FEATURES) == FEATURES, (
@@ -270,7 +112,6 @@ def validate_feature_configuration(monotone_constraints, feature_names) -> None:
         )
 
 
-# Configuration
 _NEGI_BASE_DIR = Path(__file__).resolve().parent
 
 
@@ -278,22 +119,6 @@ def _default_data_path() -> Path:
     configured_path = os.environ.get("NEGI_DATA_PATH")
     if configured_path:
         return Path(configured_path).expanduser()
-    # Prefer the v4 GEE export (carries clean_vegetation_flag /
-    # NDVI_local_stddev / veg_patch_pixel_count, needed for the mixed-pixel
-    # purity filter in load_dataset() below), then fall back to earlier/
-    # plain "Jeddah_LST_Dataset_2023" filenames if that's what's actually
-    # on disk. If only a plain (pre-v4, no purity columns) CSV is found,
-    # load_dataset() will detect the missing columns and fall back to an
-    # unfiltered ("raw") run automatically, with an explicit warning -
-    # it will never silently skip the filter the way the last run did.
-    # PROVENANCE FIX (audit #5-#8): prefer the GEE v5 RAW export. It is one
-    # random draw over all valid pixels and still carries rejected
-    # (clean_vegetation_flag == 0) pixels, so the purity filter below is
-    # actually applied HERE, its rejection counts are observable, and
-    # vegetation_purity_filter="raw" really is unfiltered. The v5 purified
-    # export (Jeddah_LST_Dataset_2023.csv) was masked BEFORE sampling and
-    # trimmed with GEE .limit(), which is not a random subsample. Kept below
-    # only as a fallback; set NEGI_DATA_PATH to force a specific file.
     candidates = (
         _NEGI_BASE_DIR / "data" / "jeddah_lst_data.csv",
         _NEGI_BASE_DIR.parent / "Downloads" / "Jeddah_LST_Dataset_2023_raw.csv",
@@ -315,248 +140,56 @@ class Config:
     downstream functions receive a `cfg` argument and read from here.
     """
 
-    # Paths
     base_dir: Path = field(default_factory=lambda: _NEGI_BASE_DIR)
     data_path: Path = field(default_factory=_default_data_path)
 
-    # Reproducibility
     random_seed: int = 42
     bootstrap_seed: int = 42
 
-    # Verbosity
     verbose: bool = False
     debug: bool = False
 
-    # Run mode (engineering-refinement item 4). This is a PRESENTATION-ONLY
-    # switch - it never changes any scientific calculation, model fit,
-    # validation fold, or exported numerical value. It only controls
-    # whether *temporary developer diagnostics* (e.g. per-substep [TIMING]
-    # lines, prediction-cache hit/miss counters) are allowed to reach the
-    # console/log:
-    #   "development"  - diagnostics may print (useful while iterating).
-    #   "publication"  - all temporary debugging output is suppressed, so a
-    #                    manuscript-facing run's console/log output is clean.
-    # Set via `Config(run_mode="publication")` or the NEGI_RUN_MODE env var.
     run_mode: str = field(
         default_factory=lambda: os.environ.get("NEGI_RUN_MODE", "development")
     )
 
-    # Export mode (publication-readiness refactor). This is a PACKAGING-ONLY
-    # switch - like run_mode above, it never changes any scientific
-    # calculation, model fit, validation fold, or in-memory diagnostic. It
-    # only controls which artifacts are WRITTEN TO DISK in cfg.data_dir:
-    #   "standard" (default) - only the curated set of publication-quality
-    #       deliverables is written. Developer/intermediate/checkpoint CSVs
-    #       are still computed in memory (so every downstream diagnostic,
-    #       log line, and figure is unaffected) but are not written to disk.
-    #   "debug" - every artifact ever produced by this pipeline is written,
-    #       exactly as before this refactor. No diagnostic capability is
-    #       lost in this mode; it is fully backwards compatible.
-    # Set via `Config(export_mode="debug")` or the NEGI_EXPORT_MODE env var.
     export_mode: str = field(
         default_factory=lambda: os.environ.get("NEGI_EXPORT_MODE", "standard")
     )
 
-    # Vegetation purity filter (mixed-pixel fix). Visual inspection
-    # (screenshots reviewed manually) confirmed that "suspect" high-NDVI
-    # pixels in the moderate/high-NDBI range were overwhelmingly villa
-    # courtyard gardens, isolated street trees, and narrow road-median
-    # landscaping - small, sub-pixel-scale green features whose 30m LST
-    # signal is dominated by surrounding pavement/roofs, not real park or
-    # canopy cover. The v4 GEE export flags each pixel with
-    # clean_vegetation_flag (1 = passes local-homogeneity + connected-
-    # component patch-size checks; see Jeddah_LST_Extraction_v4_purity_
-    # filter.js). This setting controls whether load_dataset() applies
-    # that flag:
-    #   "purified" (default) - keep only clean_vegetation_flag == 1 rows.
-    #       This is the primary/reported analysis.
-    #   "raw"                 - keep every row, ignore the flag. Use this
-    #       to reproduce the pre-fix numbers for an explicit side-by-side
-    #       comparison; NOT the default so a plain run can't silently
-    #       reproduce the mixed-pixel-inflated result again.
-    # Set via `Config(vegetation_purity_filter="raw")` or the
-    # NEGI_VEGETATION_PURITY_FILTER env var. If the loaded CSV has no
-    # clean_vegetation_flag column at all (e.g. an older v2/v3 export),
-    # load_dataset() logs an explicit warning and proceeds unfiltered
-    # regardless of this setting, rather than failing or silently
-    # matching either mode.
-    # BUG FIX: this previously fell back to "raw" when
-    # NEGI_VEGETATION_PURITY_FILTER was unset, contradicting the comment
-    # block above (which documents "purified" as the default and "raw" as
-    # an explicit, non-default opt-in). That meant a plain run - the
-    # common case, since most invocations do not set this env var -
-    # silently reproduced the mixed-pixel-inflated pre-fix analysis every
-    # time, exactly the failure mode the fix above this field was written
-    # to prevent. Corrected to fall back to "purified", matching the
-    # documented contract. "raw" remains fully available via
-    # Config(vegetation_purity_filter="raw") or the env var, for explicit
-    # side-by-side comparison against the pre-fix numbers.
     vegetation_purity_filter: str = field(
         default_factory=lambda: os.environ.get(
             "NEGI_VEGETATION_PURITY_FILTER", "purified"
         )
     )
-    # REPORTING-ONLY (audit item #6/#8): NDVI threshold used to count
-    # "vegetated" pixels in the purity-filter accounting printed by
-    # load_dataset(). It does NOT change which rows are kept - that is
-    # decided solely by clean_vegetation_flag - and it is not part of any
-    # cache key. NOTE: clean_vegetation_flag == 1 does NOT mean
-    # "vegetation"; it means "non-vegetated OR vegetation that passes the
-    # local-homogeneity and patch-size criteria".
     purity_audit_ndvi_threshold: float = 0.2
 
-    # Data splitting
     holdout_test_size: float = 0.20
     n_group_kfold_splits: int = 5
     n_random_search_iter: int = 80
     n_spatial_holdout_repeats: int = 10
 
-    # Spatial-refit uncertainty bands (item 6 audit finding): 10 refits is
-    # far too sparse to support a 2.5th/97.5th percentile estimate - with
-    # only 10 draws the extreme percentiles are effectively the min/max of
-    # 10 samples. "quick" mode (20 refits) is retained for fast iteration
-    # during development; "publication" mode (now 500 refits, see the
-    # convergence-extension note below) is used for any manuscript-facing
-    # run. Set `n_spatial_refits` explicitly to override either default.
-    #
-    # As of the adaptive-convergence fix (see
-    # adaptive_uncertainty_convergence above): this is now a MAXIMUM refit
-    # ceiling, not a fixed target. compute_uncertainty_bands() may stop
-    # earlier once the endpoint CI width has converged; the actual count
-    # used for publication is read off UncertaintyResults.n_refits_used
-    # (never assumed to equal this ceiling). Set
-    # adaptive_uncertainty_convergence=False to restore the previous
-    # fixed-count behaviour if ever needed.
-    #
-    # Convergence-extension note (review pass, recommendation 1): the
-    # ceiling was previously raised 200 -> 500 -> 1000 refits chasing a
-    # width-only convergence check that never quite settled. Doubling 500
-    # to 1000 moved the Scenario-2 endpoint's maximum-CI bounds from
-    # [0.265, 0.416] to [0.272, 0.414] and its own endpoint CI from
-    # [-0.118, 0.019] to [-0.119, 0.013] - changes far smaller than the
-    # width tolerance itself, for roughly double the runtime. That is a
-    # sign the ESTIMATE was already effectively converged at 500 and the
-    # width-only stopping rule (see compute_uncertainty_bands and
-    # compute_uncertainty_convergence_diagnostic, both reworked in this
-    # pass to track median/lower-CI/upper-CI stability individually
-    # instead of only CI width) simply hadn't recognized it. The ceiling is
-    # therefore reverted to 500; the stricter multi-quantity, limited-
-    # lookback convergence criterion is kept (and is expected to now
-    # recognize stabilization well before 500 on most runs). If a 500-refit
-    # run still hits the ceiling without stabilizing under the new
-    # criterion, that is a signal worth investigating on its own merits
-    # (e.g. residual spatial autocorrelation inflating between-refit
-    # variance) rather than something to solve by raising the ceiling
-    # again.
-    # `n_spatial_refits_previous_publication_ceiling` is a REPORTING-ONLY
-    # reference to the PRIOR (200-refit) ceiling, read by
-    # report_convergence_extension_comparison() to compare the endpoint
-    # conclusion at that old ceiling against the final adaptive endpoint -
-    # it is never used to drive any computation. Left at 500 intentionally
-    # even though the primary ceiling below is also now 500, so that
-    # comparison function still has a well-defined (if now identical)
-    # reference point rather than needing a special-cased skip.
-    #
-    # `n_spatial_refits_percentile_sensitivity` deliberately stays at the
-    # OLD 200-refit ceiling: run_scenario2_percentile_sensitivity() calls
-    # compute_uncertainty_bands() once per swept percentile, so letting it
-    # inherit the primary refit ceiling would multiply an already
-    # expensive sweep by up to 2.5x for a secondary, reporting-only
-    # analysis. Passed explicitly as compute_uncertainty_bands()'s
-    # `max_refits` override at that one call site (see that function's
-    # `max_refits` parameter); every other caller either passes its own
-    # explicit budget or leaves `max_refits=None` to fall back to
-    # `n_spatial_refits`.
-    #
-    # (Bug note: prior to the `max_refits` parameter being added to
-    # compute_uncertainty_bands(), this field was declared but never
-    # actually read anywhere - the percentile sweep silently ran the full
-    # `n_spatial_refits` ceiling for every point, ~2.5x its intended cost,
-    # with no override mechanism existing to wire it through. Fixed by
-    # adding `max_refits` as a first-class parameter and passing this
-    # field explicitly at that call site, rather than adding another
-    # bespoke, easy-to-forget config field for the next such case.)
-    spatial_refit_mode: str = "publication"   # "quick" or "publication"
+    spatial_refit_mode: str = "publication"
     n_spatial_refits_quick: int = 20
     n_spatial_refits_publication: int = 500
     n_spatial_refits_previous_publication_ceiling: int = 500
     n_spatial_refits_percentile_sensitivity: int = 200
-    n_spatial_refits: Optional[int] = None    # derived in __post_init__ if left None
+    n_spatial_refits: Optional[int] = None
     uncertainty_refit_seed: int = 43
     bootstrap_iterations: int = 1000
 
-    # Parallel-worker robustness for the spatial-refit uncertainty loop
-    # (compute_uncertainty_bands). Dispatching hundreds of XGBoost refits
-    # across a full-core Parallel(n_jobs=-1) pool can, on some platforms
-    # (observed on Windows/loky), eventually kill a worker process once
-    # its resident memory grows too large across many fits - reported as
-    # "A worker stopped while some jobs were given to the executor...
-    # too short worker timeout or ... memory leak". Each refit is
-    # independent and order-invariant, so retrying the affected batch
-    # with fewer concurrent workers (lower peak memory per batch) is
-    # numerically safe and does not change any exported result - it only
-    # changes how many refits run concurrently. Set spatial_refit_n_jobs
-    # to a fixed positive count instead of -1 to sidestep this
-    # proactively on memory-constrained machines.
     spatial_refit_n_jobs: int = -1
     spatial_refit_max_batch_retries: int = 2
 
-    # Same "worker stopped ... memory leak/timeout" failure mode can occur
-    # at any other n_jobs=-1 site in the pipeline (RandomizedSearchCV
-    # tuning in fit_model/run_nested_group_kfold_cv/compare_models,
-    # permutation_importance) - not just the spatial-refit loop above.
-    # Those sites hand parallelism off to sklearn/joblib internally rather
-    # than dispatching our own batches, so a dead worker there means the
-    # whole .fit()/call raises rather than "losing" a subset of jobs -
-    # _fit_search_with_worker_retry() below catches that and retries the
-    # WHOLE fit from scratch (CV searches can't resume partway through)
-    # with fewer workers. This is a separate knob from
-    # spatial_refit_max_batch_retries because the retry unit is much more
-    # expensive here (a full re-fit vs. one small batch), so a caller may
-    # reasonably want a different retry budget for each.
     search_fit_max_retries: int = 2
 
-    # Feature importance
     n_permutation_outer_seeds: int = 10
     n_permutation_inner_repeats: int = 30
 
-    # XGBoost
-    #
-    # Performance fix (compute-speed pass): tree_method was previously left
-    # unset everywhere, so XGBoost fell back to whatever "auto" resolves to
-    # on the installed version/build - "hist" on recent (>=1.6) releases,
-    # but the much slower "exact" greedy split-finder on older ones, and
-    # silently different again on any GPU-enabled build. That made this
-    # pipeline's wall-clock cost (hundreds of RandomizedSearchCV inner fits
-    # x 5 outer nested-CV folds x 2 benchmark models, plus up to 500
-    # spatial-block refits) dependent on an unpinned, unrecorded runtime
-    # detail rather than a config value. Pinning it explicitly to "hist"
-    # here - and threading it through every XGBRegressor construction site
-    # (fit_model, run_nested_group_kfold_cv/_for_benchmark, and the
-    # per-refit model inside compute_uncertainty_bands) - makes the
-    # histogram-binned split finder the guaranteed behaviour regardless of
-    # environment, which is typically several times faster than "exact" on
-    # a dataset this size with negligible difference in the fitted trees
-    # (both are standard, widely-used XGBoost split strategies; "hist" is
-    # also fully compatible with monotone_constraints below). This is a
-    # runtime-only change - it does not alter param_distributions, the
-    # random search itself, or any cached numerical result computed with a
-    # build that already defaulted to "hist" (i.e. it may invalidate
-    # existing caches from a run on an older xgboost build that defaulted
-    # to "exact", since the fitted trees can differ slightly - see
-    # cache_key's dataset/config fingerprinting, which will naturally pick
-    # this field up and recompute rather than silently reusing a stale
-    # cache).
     xgb_tree_method: str = field(
         default_factory=lambda: os.environ.get("NEGI_XGB_TREE_METHOD", "hist")
     )
-    # Model input columns (single source of truth: module-level FEATURES).
-    # Exposed on Config so it is visible in config hashes/manifests; it is
-    # validated against FEATURES in __post_init__, never used to build a
-    # different schema.
     feature_names: tuple[str, ...] = tuple(FEATURES)
-    # One entry per feature in `feature_names` order: NDBI increasing (1),
-    # NDVI / Elevation / ST_EMIS / ST_EMSD unconstrained (0).
     monotone_constraints: tuple[int, ...] = DEFAULT_MONOTONE_CONSTRAINTS
     param_distributions: dict = field(default_factory=lambda: {
         "n_estimators":     [100, 200, 300, 500],
@@ -570,30 +203,7 @@ class Config:
         "reg_lambda":       [1, 2, 5],
     })
 
-    # Benchmark models (Random Forest / Gradient Boosting): item-1 audit
-    # finding - compare_models() was previously fitting RF/GB with fixed,
-    # untuned hyperparameters while the benchmark_comparison report text
-    # claimed they were "tuned via RandomizedSearchCV ... with a smaller
-    # budget". That was a genuine implementation/reporting mismatch (no
-    # RandomizedSearchCV was ever run for the benchmarks). Fixed: RF and GB
-    # are now both genuinely tuned via RandomizedSearchCV on the SAME
-    # GroupKFold scheme as XGBoost. RF gets the same iteration count as
-    # XGBoost (80); GB gets its own smaller, dedicated budget (see
-    # n_benchmark_search_iter_gb below) since it is far slower per fit -
-    # so "model comparison" reflects each model's tuned best case under
-    # its own genuine, non-zero effort budget, not an identical one.
     n_benchmark_search_iter: int = 80
-    # Dedicated (smaller) tuning budget for the Gradient Boosting paired
-    # nested-CV comparison in compare_models() specifically. Plain
-    # GradientBoostingRegressor builds trees one at a time on a single
-    # core (no histogram binning, no parallelism across trees or across
-    # n_jobs the way XGBoost/RandomForest do), so at the full
-    # n_benchmark_search_iter=80 budget it is dramatically slower per fit
-    # than the other two models and can turn the 5-outer-fold x 80-iter
-    # x 5-inner-fold nested search (up to ~2,000 fits) into a
-    # multi-hour run. RandomForestRegressor keeps the full
-    # n_benchmark_search_iter budget since it parallelizes fine and isn't
-    # the bottleneck.
     n_benchmark_search_iter_gb: int = 15
     rf_param_distributions: dict = field(default_factory=lambda: {
         "n_estimators":      [200, 300, 500],
@@ -610,7 +220,6 @@ class Config:
         "min_samples_leaf": [1, 2, 4],
     })
 
-    # Scenarios
     scenario_step: float = 0.0025
     ndvi_target_percentile: float = 0.95
     ndvi_bin_edges: int = 40
@@ -619,129 +228,34 @@ class Config:
     ndbi_sweep_quantile_low: float = 0.01
     ndbi_sweep_quantile_high: float = 0.99
 
-    # NDVI-LST sign-reversal audit: NDBI percentiles at which the
-    # continuously-adjusted (NDVI + NDBI + Elevation + NDVI:NDBI) implied
-    # NDVI slope is evaluated and reported alongside the NDBI-stratified
-    # Figure 6 / Figure S18 diagnostic. See
-    # compute_ndvi_ndbi_continuous_adjustment().
     continuous_adjustment_ndbi_percentiles: tuple = (10, 25, 50, 75, 90)
 
-    # Estimator-level fix for Figure 6: continuous spline-basis varying-
-    # coefficient model (g(NDBI) = adjusted NDVI-LST slope), replacing the
-    # four-independent-regressions estimator as the primary Figure 6. See
-    # compute_ndvi_ndbi_varying_coefficient_gam().
     varying_coef_ndbi_df_grid: tuple = (3, 4, 5, 6, 7, 8, 10, 12, 15)
-    varying_coef_elev_df: int = 5              # nuisance smooth control, fixed (not searched)
-    varying_coef_cv_folds: int = 10            # GroupKFold(spatial_block) folds for df selection
-    varying_coef_n_boot: int = 1000            # spatial-block-bootstrap draws for g(NDBI) CI
+    varying_coef_elev_df: int = 5
+    varying_coef_cv_folds: int = 10
+    varying_coef_n_boot: int = 1000
     varying_coef_grid_points: int = 200
     varying_coef_grid_percentile_lo: float = 1.0
     varying_coef_grid_percentile_hi: float = 99.0
-    varying_coef_support_window_halfwidth: float = 0.01   # NDBI units, for local support counts
-    varying_coef_low_support_blocks: int = 200            # below this: flagged, not hidden
+    varying_coef_support_window_halfwidth: float = 0.01
+    varying_coef_low_support_blocks: int = 200
     varying_coef_sensitivity_df_grid: tuple = (3, 5, 6, 7, 8, 10, 12, 15)
 
-    # Scenario 2 - realistic municipal greening intervention for Jeddah
-    # (see run_scenario_trajectories() docstring for the full rationale).
-    # NOTE (cleanup pass): an earlier fixed +20% NDVI / -8% NDBI
-    # relative-change definition (config fields s2_ndvi_relative_increase /
-    # s2_ndbi_relative_reduction) was superseded by the archetype-anchored
-    # endpoint below and has been removed, since it was unused and its
-    # dedicated config fields had no other reference in the pipeline.
 
-    # Scenario 2 (REVISED v2) - urban-archetype-anchored endpoint,
-    # DEFINED WITHOUT REFERENCE TO THE MODEL. An earlier revision of this
-    # config/function selected the endpoint by walking down NDBI
-    # percentiles until the FITTED MODEL predicted enough cooling at a
-    # candidate. On review, that introduces circularity: the workflow
-    # becomes Model -> Scenario -> Model -> NEGI instead of the intended
-    # Scenario -> Model -> NEGI, i.e. the intervention would be optimised
-    # against the very model that then evaluates it. That model-search
-    # function (``select_scenario2_empirical_endpoint``) has since been
-    # deleted as dead code (see version control history); it was never
-    # called anywhere in this pipeline.
-    #
-    # The endpoint used now is instead fixed a priori, independent of any
-    # model prediction: it is the NEAREST OBSERVED ARCHETYPE PIXEL to the
-    # (NDVI, NDBI) target-percentile profile at ``s2_archetype_ndbi_percentile``
-    # - documented here as representing Jeddah's existing lower-density,
-    # more vegetated residential/park districts, chosen on urban-form
-    # grounds, not by searching for a favourable model output. Audit note
-    # (integrity pass): the prior implementation took the NDVI and NDBI
-    # medians of the cumulative subset SEPARATELY, which are two
-    # independent marginal statistics with no guarantee any single real
-    # pixel actually has that joint combination - i.e. a synthetic joint
-    # point, despite each coordinate being a real marginal value. That is
-    # fixed: the two medians are now used only as a TEMPORARY target, and
-    # the returned endpoint is the single closest real observation to that
-    # target (see ``_empirical_cumulative_bin_stats``), so the endpoint is
-    # always an actual observed pixel, never a synthetic combination.
-    # The model is used only AFTERWARD, to evaluate predicted LST/NEGI
-    # along the resulting trajectory - never to pick the trajectory or the
-    # archetype pixel.
-    #   s2_archetype_ndbi_percentile : NDBI percentile of the archetype
-    #       target profile. 0.15 (city-wide 15th percentile of observed
-    #       imperviousness) was chosen to represent a realistic,
-    #       moderate redevelopment target - an existing lower-density,
-    #       greener residential/park-adjacent profile - rather than the
-    #       single greenest pixel in the dataset. This is a documented,
-    #       a-priori urban-form judgement call, not a value derived from
-    #       data or model output; see the widened sensitivity sweep below
-    #       for how much the conclusion depends on this specific choice.
-    #   s2_search_min_bin_count      : minimum number of observed pixels
-    #       required in the cumulative subset for the target profile (and
-    #       the nearest-pixel search within it) to be treated as stable.
-    #   s2_meaningful_cooling_threshold_c : REPORTING-ONLY threshold (deg
-    #       C). Used solely, after the archetype trajectory has already
-    #       been evaluated by the model, to describe in diagnostics/
-    #       figure captions whether the (independently-chosen) archetype
-    #       happens to fall in a region the model predicts meaningful
-    #       cooling in. It plays no role in choosing the endpoint.
-    #   s2_trajectory_n_bins         : number of empirical percentile
-    #       bins used to build the path FROM the baseline TO the
-    #       archetype endpoint (see build_scenario2_empirical_trajectory());
-    #       the path is resampled onto the same scenario-fraction axis
-    #       used everywhere else so no other downstream code changes.
     s2_archetype_ndbi_percentile: float = 0.15
     s2_search_min_bin_count: int = 30
     s2_meaningful_cooling_threshold_c: float = 0.10
     s2_trajectory_n_bins: int = 40
 
-    # Scenario 2 percentile-sensitivity analysis (engineering addition -
-    # reporting/export only; does NOT change the primary Scenario 2
-    # endpoint above, and does not feed back into it in any way). Evaluates
-    # the same model-blind archetype construction
-    # (select_scenario2_archetype_endpoint / build_scenario2_empirical_trajectory)
-    # at each of these additional NDBI percentiles, purely so a reader can
-    # see how sensitive the endpoint's predicted deltaT/NEGI/robustness are
-    # to the specific percentile chosen for the primary analysis
-    # (``s2_archetype_ndbi_percentile``, above). The primary endpoint is
-    # never selected or adjusted from this sweep.
-    #
-    # Audit note (integrity pass): the previous four-point grid
-    # (0.10-0.25) was too narrow to show whether the qualitative
-    # conclusion at the primary 0.15 percentile is stable across a
-    # genuinely different range of intervention magnitudes. Widened to a
-    # dense 0.05-0.40 grid in 0.025 steps (np.arange(0.05, 0.401, 0.025)).
     s2_sensitivity_percentiles: tuple = tuple(
         float(p) for p in np.round(np.arange(0.05, 0.401, 0.025), 4)
     )
     run_s2_percentile_sensitivity: bool = True
 
-    # NOTE (cleanup pass): the earlier model-guided Scenario 2 endpoint
-    # selector (`select_scenario2_empirical_endpoint`) and its dedicated
-    # config fields (s2_search_start_percentile, s2_search_floor_percentile,
-    # s2_search_percentile_step, s2_search_min_cooling_c) have been removed.
-    # That selector was unused (superseded by
-    # `select_scenario2_archetype_endpoint`, above) and its own docstring
-    # documented it as circular (Model -> Scenario -> Model -> NEGI) and
-    # retained only for provenance; version control preserves that history.
 
-    # Smoothing
     tree_jump_threshold_c: float = 0.10
     savgol_smooth_target_window_pct: float = 5.0
 
-    # NEGI
     alpha_weight: float = 1.0
     beta_weight: float = 1.0
     reference_w0: float = 200.0
@@ -750,115 +264,31 @@ class Config:
     linear_exponent: float = 1.0
     reference_cooling_scale_factor: float = 1.0
 
-    # Support / extrapolation
     support_knn_k: int = 5
     support_percentile: float = 95.0
     moran_k_neighbors: int = 8
-    # Item 3 audit finding: prefer permutation-based inference for Moran's I
-    # over the normal approximation alone. 999 permutations gives a minimum
-    # achievable two-sided p-value of 1/1000 = 0.001, which is disclosed
-    # explicitly rather than letting a permutation p-value of 0 be printed
-    # (item 17).
     moran_n_permutations: int = 999
     moran_permutation_seed: int = 42
 
-    # Empirical local-density diagnostic (reporting only - does not affect
-    # formal feature-bounds or formal kNN support classification, and never
-    # overrides a formal PASS from compute_support_diagnostics). Both
-    # thresholds are derived once from the observed/model-reference kNN-
-    # distance distribution (the same standardized predictor space and same
-    # k used for scenario support assessment), NOT from the scenario
-    # trajectory itself.
-    #
-    # Endpoint-density fix: this used to be set to the SAME value as
-    # `support_percentile` (95.0) above, which made the "sparse region"
-    # flag mathematically unable to ever fire - a point that passes formal
-    # support (kNN distance <= 95th-pct threshold) can never simultaneously
-    # exceed a sparsity threshold set at that identical 95th-pct value, so
-    # `sparse_region_mask` always evaluated to False regardless of the
-    # data. Lowered to 80.0 so the two thresholds are genuinely distinct:
-    # a point can now pass formal feature support (<=95th pct) while still
-    # being flagged as locally sparse (>80th pct) - exactly the "endpoint
-    # sits in a sparse region even though feature support passes" question
-    # this diagnostic exists to answer.
     FEATURE_SPARSITY_PERCENTILE: float = 80.0
-    # Second, lower boundary used together with FEATURE_SPARSITY_PERCENTILE
-    # to report local density as three levels (HIGH / MODERATE / LOW)
-    # instead of a single sparse/not-sparse flag: HIGH = at or below this
-    # percentile of the reference kNN-distance distribution, MODERATE =
-    # between this and FEATURE_SPARSITY_PERCENTILE, LOW = above
-    # FEATURE_SPARSITY_PERCENTILE (equivalent to the old sparse-region
-    # flag). Must stay below FEATURE_SPARSITY_PERCENTILE; validated in
-    # run_qa_checks.
     DENSITY_MODERATE_PERCENTILE: float = 50.0
 
-    # Joint multivariate feature-space support diagnostic (Task 1 addition).
-    # Reuses the EXISTING kNN/scaler infrastructure in
-    # compute_support_diagnostics (`support.scaler`, `support.mean_knn_dist_s1
-    # /s2`, `support.reference_mean_knn_dist`) - this is a SEPARATE report on
-    # top of that data, not a new model. `joint_support_percentile` reuses
-    # the already-defined `support_percentile` (95.0) rather than introducing
-    # a second, competing threshold. A trajectory point's joint kNN distance
-    # is already computed jointly over standardized NDVI/NDBI/Elevation, so
-    # "beyond the threshold" here means "beyond the Nth percentile of the
-    # TRAINING data's own joint kNN-distance distribution" - larger distance
-    # = sparser joint support, smaller = denser.
     joint_support_percentile: float = 95.0
 
-    # Spatial blocking (Task 2 fix). CORRECTION: the pipeline previously
-    # treated `block_id` as an opaque, arbitrary grouping with "no raw
-    # coordinates available to re-grid from." That claim was false - the
-    # input CSV carries genuine WGS84 `lat`/`lon` columns for every row
-    # (see _find_spatial_columns, already used elsewhere for the Moran's I
-    # residual diagnostic), and `block_id` itself turned out to be a
-    # deterministic encoding of those same coordinates on a ~0.01 deg
-    # (~1km x ~1.1km) grid: block_id = floor(lon*100)*100000 + floor(lat*100),
-    # verified exactly across every row. A ~1km grouping is far too fine to
-    # serve as the GroupKFold/bootstrap spatial unit: an empirical
-    # distance-binned correlogram of raw LST (estimate_response_correlogram,
-    # computed on the response BEFORE any model is fit, precisely to avoid
-    # a model->blocking->model circularity) shows spatial autocorrelation
-    # that is still strong at <250m and does not meaningfully decay until
-    # roughly 10-16km - i.e. ~1km blocks sit deep inside the correlated
-    # range and cannot deliver a genuinely held-out spatial test.
-    #
-    # `spatial_block_cell_size_deg` is therefore the PRIMARY spatial-block
-    # grid cell, re-derived directly from lat/lon (build_primary_spatial_blocks)
-    # rather than from block_id. Default 0.09 deg (~10km at Jeddah's
-    # latitude/longitude) sits at the front edge of the correlogram's decay
-    # region - see estimate_response_correlogram() output for the run-time
-    # justification of this choice on the actual data.
     spatial_block_cell_size_deg: float = 0.09
-    # Block-size sensitivity sweep: re-grids the ORIGINAL lat/lon at
-    # `spatial_block_cell_size_deg * factor` for each factor below - a
-    # genuine geographic coarsening of the primary grid, not an ordinal
-    # merge of block labels. factor=1 always reproduces the primary
-    # grouping exactly.
     spatial_block_merge_factors: tuple[int, ...] = (1, 2, 3, 4)
-    # Minimum number of resulting spatial groups required for a merge factor
-    # to be evaluated (below this, GroupShuffleSplit resampling is not
-    # meaningful); factors producing fewer groups are skipped and recorded.
     spatial_block_min_groups: int = 10
-    # estimate_response_correlogram() settings: pairwise distances are
-    # computed on a random SAMPLE of point pairs (exact all-pairs is
-    # O(n^2) and infeasible at n ~ 15k-30k), binned by great-circle-ish
-    # planar distance (flat-earth approximation - fine at this <=20km
-    # extent), reporting a Moran's-I-style standardized cross-product per
-    # bin.
     correlogram_n_pairs: int = 400_000
     correlogram_max_dist_km: float = 20.0
     correlogram_n_bins: int = 20
     correlogram_seed: int = 42
 
-    # Uncertainty
     uncertainty_percentiles: tuple[float, ...] = (2.5, 25.0, 50.0, 75.0, 97.5)
 
-    # Saturation diagnostic
     saturation_high_fraction: float = 0.90
     saturation_mid_fraction: float = 0.50
     saturation_near_zero_fraction: float = 0.05
 
-    # Sensitivity
     sensitivity_exponents: tuple[float, ...] = (0.5, 1.0, 1.25, 1.5, 1.75)
     sensitivity_alpha_values: tuple[float, ...] = tuple(np.arange(0.4, 2.21, 0.2))
     sensitivity_beta_values: tuple[float, ...] = tuple(np.arange(0.4, 2.21, 0.2))
@@ -866,110 +296,34 @@ class Config:
     sensitivity_default_exponent: float = 0.5
     sensitivity_default_beta: float = 1.0
 
-    # Cost-regime diagnostic (compute_cost_regime_diagnostic). These are
-    # DESCRIPTIVE reporting thresholds used to label what the existing
-    # alpha/beta/w0 grid shows - they do not enter the NEGI formula, the
-    # scenario trajectories, or the grid itself.
-    #   cost_regime_min_gap_pct:
-    #       smallest jump in the optimum's scenario position (percentage
-    #       points of scenario intensity) that is treated as a regime
-    #       transition rather than ordinary drift of the maximum.
-    #   cost_regime_min_cluster_fraction:
-    #       each side of the transition must hold at least this fraction of
-    #       evaluated grid cells for the grid to be called "bimodal".
-    #   cost_regime_dominant_jump_fraction:
-    #       the largest single jump must account for at least this fraction
-    #       of the total movement of the optimum across the whole cost range
-    #       for the transition to be called "sharp" (single dominant snap)
-    #       rather than "stepwise" / "gradual".
-    #   cost_regime_boundary_search_points:
-    #       resolution of the log-spaced scan over the effective cost ratio
-    #       used to locate the snap point before bisection refinement.
     cost_regime_min_gap_pct: float = 10.0
     cost_regime_min_cluster_fraction: float = 0.05
     cost_regime_dominant_jump_fraction: float = 0.5
     cost_regime_boundary_search_points: int = 4001
 
-    # Interpretive diagnostics (peer review): reporting only, no effect on
-    # any modelling, optimization, or NEGI computation.
     qq_envelope_percentiles: tuple[float, float] = (95.0, 99.0)
     low_r2_threshold: float = 0.10
     variance_band_very_weak: float = 0.05
     variance_band_weak: float = 0.15
     variance_band_moderate: float = 0.30
 
-    # Interpretation-only thresholds: these control only which canned
-    # interpretive sentence is shown, and do not feed into any model,
-    # validation, optimization, or NEGI computation.
-    moran_i_magnitude_threshold: float = 0.30      # magnitude-based flag
-    scenario_boundary_tolerance_pct: float = 5.0   # "near boundary" band
-    trajectory_stability_neighbor_steps: int = 2    # +/- steps around the max
-                                                     # to inspect for local instability
-    trajectory_stability_jump_threshold: float = 0.05  # NEGI-unit jump treated as
-                                                         # "sharp" (interpretation-only)
+    moran_i_magnitude_threshold: float = 0.30
+    scenario_boundary_tolerance_pct: float = 5.0
+    trajectory_stability_neighbor_steps: int = 2
+    trajectory_stability_jump_threshold: float = 0.05
 
-    # Local-stability review pass (recommendation 6): the original
-    # two-neighbour "biggest jump / sign flip" check is retained as-is
-    # (nothing above is removed - trajectory_stability_neighbor_steps and
-    # trajectory_stability_jump_threshold still drive it, and downstream
-    # fields `biggest_jump` / `sign_flip` are unchanged), but it is now
-    # ADDITIONALLY corroborated by a wider-window, curvature-aware check:
-    # the maximum local derivative (steepest slope between adjacent
-    # evaluated points) across a bigger neighbourhood. A derivative-based
-    # check is used rather than the coefficient of variation the review
-    # also suggested, because NEGI legitimately crosses zero along the
-    # trajectory - CV = std/|mean| is undefined/explosive there and would
-    # flag ordinary near-zero-crossing behaviour as "unstable" for reasons
-    # having nothing to do with actual local instability. Maximum local
-    # derivative has no such singularity and directly answers "how fast is
-    # NEGI changing with scenario intensity right here", which is the
-    # quantity local stability is actually trying to capture.
-    trajectory_stability_cv_window_steps: int = 4   # wider neighbourhood
-                                                     # than trajectory_stability_neighbor_steps,
-                                                     # used only for the derivative check
-    trajectory_stability_max_derivative: float = 0.05  # max allowed |delta NEGI /
-                                                         # delta scenario_pct-step|
-                                                         # before flagging as unstable
+    trajectory_stability_cv_window_steps: int = 4
+    trajectory_stability_max_derivative: float = 0.05
 
-    # Local-density review pass (recommendation 8): classify_local_density()
-    # now works from a continuous z-score against the reference kNN-distance
-    # distribution (mean/std of `reference_knn_distribution`) instead of
-    # comparing the raw distance against two fixed-percentile threshold
-    # VALUES. This is mathematically closer to "how many standard
-    # deviations from typical is this point's local density", which reads
-    # more naturally than a percentile lookup and degrades gracefully for
-    # any reference sample size. FEATURE_SPARSITY_PERCENTILE and
-    # DENSITY_MODERATE_PERCENTILE are kept (unchanged) as the basis for the
-    # separate formal `sparsity_threshold` / `density_moderate_threshold`
-    # values still used by sparse_region_mask() and by the formal support
-    # PASS/FAIL check - only the three-level HIGH/MODERATE/LOW *labelling*
-    # switches to the z-score.
-    local_density_z_high: float = 0.0       # z <= this -> "HIGH" density
-    local_density_z_moderate: float = 1.0   # z <= this -> "MODERATE" density
-                                             # (z above this -> "LOW")
+    local_density_z_high: float = 0.0
+    local_density_z_moderate: float = 1.0
 
-    # Internal robustness score (recommendation 4): a single weighted score
-    # in [0, 1] computed from the same five signals every caller already
-    # inspected as separate boolean/near-boolean checks (CI-excludes-zero,
-    # feature support, local density, boundary proximity, local stability).
-    # This is INTERNAL bookkeeping only - it is never itself reported to a
-    # reader as a headline number - it exists so the final robust/not-robust
-    # classification is one threshold comparison against one score instead
-    # of a hand-maintained chain of `and`/`or` conditions scattered across
-    # call sites. `robust = score >= robustness_score_threshold` must
-    # still agree with the previous "CI excludes zero AND locally stable
-    # AND in support" rule in the ordinary case where every component is
-    # unambiguous (each component below is 0.0/1.0 in that case, so a
-    # threshold at 0.99 recovers exactly "all must pass"); the weights only
-    # matter for how a PARTIAL/borderline signal (e.g. LOW-but-not-failing
-    # local density) trades off against the others.
     robustness_score_weights: dict = field(default_factory=lambda: {
         "ci": 0.35, "support": 0.25, "density": 0.15,
         "boundary": 0.10, "stability": 0.15,
     })
     robustness_score_threshold: float = 0.99
 
-    # Colour palette
     color_primary: str = "#1B6FA8"
     color_secondary: str = "#4A96C8"
     color_accent: str = "#C84A4A"
@@ -977,10 +331,8 @@ class Config:
     color_s1: str = "#2A9D8F"
     color_s2: str = "#E76F51"
 
-    # Figures
     default_figsize: tuple[float, float] = (10.0, 6.0)
 
-    # Spatial column name candidates
     spatial_x_candidates: tuple[str, ...] = (
         "x", "X", "longitude", "Longitude", "lon", "Lon", "easting", "Easting"
     )
@@ -988,7 +340,6 @@ class Config:
         "y", "Y", "latitude", "Latitude", "lat", "Lat", "northing", "Northing"
     )
 
-    # Derived paths (set in __post_init__)
     results_dir:            Path = field(init=False)
     data_dir:               Path = field(init=False)
     main_png_dir:           Path = field(init=False)
@@ -996,36 +347,13 @@ class Config:
     supplementary_png_dir:  Path = field(init=False)
     supplementary_pdf_dir:  Path = field(init=False)
 
-    # Fast-dev mode (opt-in, NOT the default). A full run at the defaults
-    # above is legitimately slow - nested CV re-runs an 80-iteration
-    # RandomizedSearchCV per outer fold for two models, plus 200 spatial
-    # refits, plus 1000 bootstrap iterations, plus 300 permutation-
-    # importance repeats - because those budgets are what "publication"
-    # mode is for. fast_dev drastically shrinks all of them at once so a
-    # full re-run takes roughly seconds instead of minutes, for iterating
-    # on the script itself. Enable via `Config(fast_dev=True)` or the
-    # NEGI_FAST_DEV=1 environment variable. A console warning is always
-    # emitted while active so its output can never be mistaken for a
-    # manuscript-facing result.
     fast_dev: bool = field(
         default_factory=lambda: os.environ.get("NEGI_FAST_DEV", "") not in ("", "0", "false", "False")
     )
 
-    # --- Development-speed features (items 2/3/8 of the dev-speed audit) ---
-    # None of these change what gets computed or reported in a full run at
-    # the defaults below - they only affect whether/how a stage's result is
-    # persisted to disk and reused across re-runs. Publication-mode output
-    # is identical with these on or off.
     cache_enabled: bool = field(
         default_factory=lambda: os.environ.get("NEGI_CACHE", "1") not in ("0", "false", "False")
     )
-    # Per-stage "should this run fresh" switches. Default True everywhere
-    # (= identical behaviour to before these switches existed). Setting one
-    # False is a *request* to reuse a cached result instead of recomputing;
-    # it is never allowed to silently skip a stage outright - see
-    # run_or_cached_stage(), which forces a fresh run (and warns) on a
-    # cache miss regardless of these flags, because a downstream stage
-    # always needs a real result to consume.
     run_model_tuning:          bool = True
     run_nested_validation:     bool = True
     run_benchmarks:            bool = True
@@ -1035,106 +363,28 @@ class Config:
     run_moran_permutations:      bool = True
     regenerate_figures:          bool = True
 
-    # Adaptive uncertainty-refit convergence (data-driven stopping rule -
-    # highest priority robustness fix). compute_uncertainty_bands() now
-    # fits spatial refits INCREMENTALLY, in batches of
-    # `uncertainty_convergence_check_interval`, and checks the Scenario-2
-    # trajectory ENDPOINT's 95% CI width after every batch. It stops as
-    # soon as BOTH (a) the endpoint CI width's percent change stays below
-    # `adaptive_convergence_tolerance` across
-    # `uncertainty_convergence_required_stable_checkpoints` CONSECUTIVE
-    # checkpoints, AND (b) no checkpoint-to-checkpoint change over a wider
-    # lookback window (twice as many checkpoints) exceeds the stricter
-    # `uncertainty_convergence_tolerance` - CRUX FIX: (b) used to be a
-    # purely descriptive, after-the-fact diagnostic with no effect on
-    # when fitting stopped, which let the loop stop and publish a band
-    # its own stricter check would go on to call "NOT YET STABILIZED".
-    # It is now a real gate. Otherwise, or once `n_spatial_refits` (a
-    # MAXIMUM/ceiling, rather than a fixed target) is reached, fitting
-    # stops - whichever comes first.
-    #
-    # This replaces the previous behaviour, where the pipeline always fit
-    # exactly `n_spatial_refits` refits and only reported - after the
-    # fact, via a separate, redundant re-fit sweep - whether the CI width
-    # "happened" to have stabilized by that fixed count. The actual number
-    # of refits used for publication is now itself the output of a
-    # convergence criterion, not an arbitrary constant.
     adaptive_uncertainty_convergence: bool = True
-    # Size of the FIRST batch fit before the first checkpoint is evaluated
-    # ("start at the configured minimum"). Every batch after that advances
-    # by `uncertainty_convergence_check_interval` ("the configurable
-    # increment"). Equal to the check interval by default, so out-of-the-box
-    # behaviour is unchanged - the two are only independently configurable.
     uncertainty_convergence_min_refits: int = 25
     uncertainty_convergence_check_interval: int = 25
     uncertainty_convergence_required_stable_checkpoints: int = 3
-    # Relative-change tolerance (fraction) applied to CONSECUTIVE
-    # checkpoint-to-checkpoint changes in the endpoint CI width during the
-    # adaptive stopping loop above (distinct from
-    # `uncertainty_convergence_tolerance` below, which is a separate,
-    # reporting-only quantity retained for backward-compatible console/
-    # export text).
     adaptive_convergence_tolerance: float = 0.02
 
-    # Uncertainty-convergence diagnostic (robustness-symmetry audit, item 3).
-    # This now READS the checkpoint history the adaptive loop above already
-    # recorded (`UncertaintyResults.convergence_checkpoints`) instead of
-    # recomputing a separate probe sweep at fixed refit counts. Purely a
-    # reporting/export step - it never re-fits anything and never changes
-    # the published uncertainty bands.
     run_uncertainty_convergence_diagnostic: bool = True
-    # No longer used to drive the diagnostic sweep (see above) - kept only
-    # so any external code still reading this field doesn't break.
     uncertainty_convergence_refit_counts: tuple[int, ...] = (25, 50, 100, 200)
-    # Relative-change tolerance (fraction) used to decide "stabilized
-    # across the full refit history" (compute_uncertainty_convergence_
-    # diagnostic's after-the-fact report). CRUX FIX: this tolerance now
-    # ALSO gates the live adaptive-stopping loop in
-    # compute_uncertainty_bands() - the loop will not stop early unless
-    # a wider lookback window of checkpoints also satisfies this
-    # tolerance, not just the narrower `adaptive_convergence_tolerance`
-    # window. Previously this field was reporting-only and could
-    # disagree with (without affecting) the published uncertainty band;
-    # it no longer can.
     uncertainty_convergence_tolerance: float = 0.05
 
-    # Review-pass fix (recommendation 3): compute_uncertainty_convergence_
-    # diagnostic's "STABILIZED"/"NOT YET STABILIZED" verdict previously
-    # required EVERY consecutive checkpoint-to-checkpoint transition since
-    # the very first checkpoint (refit ~uncertainty_convergence_min_refits)
-    # to individually satisfy `uncertainty_convergence_tolerance` - i.e.
-    # agreement across the entire history. That is overly conservative:
-    # once the early transient part of the walk has settled, those first
-    # transitions carry essentially no information about whether the
-    # estimate is stable NOW, and a single early oscillation could prevent
-    # the run from ever reporting STABILIZED regardless of how flat the
-    # walk became afterward. The verdict now looks only at the most recent
-    # `uncertainty_convergence_lookback_checkpoints` checkpoints (default
-    # 8, matching the reviewer's suggestion) - still a rigorous, pre-
-    # registered rule, just not one an early transient can veto forever.
-    # If fewer than this many checkpoints exist, all available checkpoints
-    # are used (never an error, never a spurious verdict from a window
-    # larger than the data).
     uncertainty_convergence_lookback_checkpoints: int = 8
 
     def __post_init__(self) -> None:
         self.base_dir = Path(self.base_dir)
         self.data_path = Path(self.data_path)
 
-        # run_mode gates *reporting* only (see field docstring above); it
-        # must be one of exactly two values so a typo can't silently fall
-        # through to "diagnostics always off" or "always on".
         if self.run_mode not in ("development", "publication"):
             raise ValueError(
                 "Config.run_mode must be 'development' or 'publication', "
                 f"got {self.run_mode!r}."
             )
 
-        # export_mode gates *which artifacts are written to disk* only (see
-        # field docstring above) - it never changes a computed value, so it
-        # is validated the same defensive way as run_mode: exactly two
-        # allowed values, fail loudly on a typo rather than silently
-        # exporting nothing or everything.
         if self.export_mode not in ("standard", "debug"):
             raise ValueError(
                 "Config.export_mode must be 'standard' or 'debug', "
@@ -1156,7 +406,7 @@ class Config:
             self.n_benchmark_search_iter_gb  = min(self.n_benchmark_search_iter_gb, 4)
             self.n_group_kfold_splits        = min(self.n_group_kfold_splits, 3)
             self.spatial_refit_mode          = "quick"
-            self.n_spatial_refits            = None  # re-derived below from quick mode
+            self.n_spatial_refits            = None
             self.n_spatial_refits_quick      = min(self.n_spatial_refits_quick, 10)
             self.bootstrap_iterations        = min(self.bootstrap_iterations, 100)
             self.n_permutation_outer_seeds   = min(self.n_permutation_outer_seeds, 2)
@@ -1164,8 +414,6 @@ class Config:
             self.n_spatial_holdout_repeats   = min(self.n_spatial_holdout_repeats, 3)
             self.moran_n_permutations        = min(self.moran_n_permutations, 99)
 
-        # Item 6: resolve the number of spatial refits from the requested
-        # mode unless the caller explicitly set n_spatial_refits themselves.
         if self.n_spatial_refits is None:
             if self.spatial_refit_mode not in ("quick", "publication"):
                 raise ValueError(
@@ -1177,20 +425,6 @@ class Config:
                 if self.spatial_refit_mode == "publication"
                 else self.n_spatial_refits_quick
             )
-        # A minimum-of-100-samples heuristic for reporting a 2.5th/97.5th
-        # percentile at all; below this, the extreme percentiles are just
-        # order statistics of a handful of draws and should not be reported
-        # as if they were precise. This does not block "quick" development
-        # runs, but does surface the limitation as a warning rather than
-        # silently reporting sparse percentiles as if they were reliable.
-        # This is an engineering/config-sanity warning, not a scientific
-        # result, so - per the publication-console requirement - it is only
-        # ever shown in "development" mode; a "publication" run never
-        # displays it (the underlying sparsity, if any, is still fully
-        # computed and reported wherever n_spatial_refits itself is
-        # exported - this only gates the developer-facing warning text).
-        # Uses `warnings.warn` (not the module logger) because Config can
-        # be constructed standalone, before configure_logging() has run.
         if self.n_spatial_refits < 30 and self.run_mode != "publication":
             warnings.warn(
                 f"Config.n_spatial_refits={self.n_spatial_refits} is very sparse for "
@@ -1198,8 +432,6 @@ class Config:
                 "spatial_refit_mode='publication' (>=100 refits) for manuscript output.",
                 stacklevel=2,
             )
-        # Canonical layout:  Results/Main/{PNG,PDF}  and
-        #                    Results/Supplementary/{PNG,PDF}
         self.results_dir           = self.base_dir / "Results"
         self.data_dir              = self.base_dir / "Data"
         self.main_png_dir          = self.results_dir / "Main" / "PNG"
@@ -1210,84 +442,14 @@ class Config:
 
 CFG = Config()
 
-# ============================================================================
-# DISK CACHING / CHECKPOINTING  (development-speed feature; see item 2/3/7/9
-# of the dev-speed audit)
-# ============================================================================
-# This section changes wall-clock time on RE-RUNS ONLY. It never changes
-# WHAT gets computed or what a fresh run reports: a cache hit returns
-# exactly the object a fresh computation would have produced, because the
-# cache key is derived from every input that could change the result -
-# dataset contents, the relevant Config values for that stage, random
-# seeds, hyperparameters/feature definitions, and CACHE_SCHEMA_VERSION.
-# Bump CACHE_SCHEMA_VERSION whenever the *logic* of a cached stage changes,
-# so caches written by a previous code version are automatically treated
-# as a miss (never silently reused) rather than requiring a manual `rm`.
-#
-# This is also what makes a "figure-only" re-run fast (item 7): if none of
-# a stage's inputs changed, every expensive stage (tuning / nested CV /
-# benchmarks / permutation importance / uncertainty refits / bootstrap)
-# is a cache hit, and only the plotting/report stage actually re-executes.
-# CRUX FIX FOLLOW-UP: the uncertainty-bands adaptive-stopping logic
-# changed (unified the local and extended-lookback convergence checks -
-# see compute_uncertainty_bands()). That is exactly the "*logic* of a
-# cached stage changes" case this constant exists for, so it is bumped
-# 3 -> 4 here. Without this bump, a machine with an existing
-# .negi_cache/ directory would keep silently returning the OLD
-# uncertainty_bands pickle (375 refits, non-unified stopping rule)
-# forever, because the cache key does not otherwise change when only
-# in-process Python logic is edited - the config values it hashes are
-# unchanged. This bump is what actually makes the fix take effect on
-# any machine with a pre-existing cache; deleting .negi_cache/ by hand
-# would work too, but is easy to forget and is not equivalent to a
-# guaranteed, automatic invalidation.
-#
-# HOLDOUT-INDEPENDENCE FIX (audit item 10): baseline NDVI/NDBI/elevation,
-# the Scenario 2 archetype endpoint/trajectory, and the empirical
-# feature-space support bounds/reference distribution are now derived
-# from the training partition only (data.df_train / data.X_train), not
-# the full dataset. This changes every scenario-defining quantity and
-# therefore every downstream cached artifact (scenario trajectories,
-# NEGI, uncertainty bands, support diagnostics). Bumped 4 -> 5 so any
-# machine with a pre-existing cache recomputes from scratch instead of
-# silently reusing pre-fix (holdout-contaminated) values.
-#
-# FIVE-FEATURE MODEL (ST_EMIS, ST_EMSD added): the predictive model, every
-# refit, every scenario prediction, the support/kNN reference space, the
-# permutation-importance table and the percentile-sensitivity table now
-# depend on a five-column feature set instead of three, and the
-# percentile-sensitivity table gained the maximum_scenario_pct /
-# maximum_negi columns. Bumped 5 -> 6 so no pre-existing three-feature
-# cache entry can be silently reused. _cache_key() additionally hashes the
-# FEATURES list itself, so any future change to the feature set also
-# invalidates caches automatically.
 CACHE_SCHEMA_VERSION = 6
 
-# Human-readable release identifier for this codebase, independent of the
-# cache-schema version above. Bump this whenever the engineering scaffolding
-# (logging, caching, exports, tests) changes in a way worth recording in
-# run_manifest.json - it is NOT tied to, and must never be conflated with,
-# CACHE_SCHEMA_VERSION (which governs cache invalidation for scientific
-# stages only).
 PIPELINE_VERSION = "1.2.0"
 
-# JSON indentation width used by every JSON export helper in this module
-# (save_json, print_reproducibility_info, etc.) - a single named constant
-# so all exported JSON files are formatted consistently. Value unchanged
-# from what every export already used (2).
 JSON_INDENT = 2
 
-# Timeout (seconds) for the best-effort `git rev-parse` subprocess call in
-# _get_git_hash() below - named so the value's purpose is documented at a
-# glance instead of a bare literal. Value unchanged from what the call
-# already used (5).
 DEFAULT_TIMEOUT_SECONDS = 5
 
-# Per-stage cache status ("cache hit" / "computed"), populated by
-# run_or_cached_stage() as the pipeline runs. Purely a reporting aid (item 1
-# / item 3): read by main() to print an explicit per-step status line and to
-# populate the "cache_status" field of run_manifest.json. Never consulted
-# for any scientific decision.
 _CACHE_STAGE_STATUS: dict[str, str] = {}
 
 
@@ -1346,7 +508,6 @@ def _dataset_fingerprint(cfg: Config) -> str:
         "file_hash": file_hash,
         "vegetation_purity_filter": cfg.vegetation_purity_filter,
         "spatial_block_cell_size_deg": cfg.spatial_block_cell_size_deg,
-        # The effective modelled frame now carries the five-feature set.
         "features": list(FEATURES),
     }
     blob = json.dumps(effective, sort_keys=True, default=str).encode("utf-8")
@@ -1365,10 +526,6 @@ def _cache_key(stage: str, cfg: Config, **extra) -> str:
         "stage": stage,
         "schema_version": CACHE_SCHEMA_VERSION,
         "dataset_fingerprint": _dataset_fingerprint(cfg),
-        # Feature set and monotone constraints are part of EVERY cached
-        # stage's identity (model fits, refits, importance, scenario
-        # predictions) - a stage can never be restored from a cache built
-        # on a different feature schema.
         "feature_set": list(FEATURES),
         "monotone_constraints_schema": list(cfg.monotone_constraints),
         **extra,
@@ -1397,7 +554,7 @@ def cache_load(cfg: Config, stage: str, key: str):
             obj = pickle.load(f)
         log_info(f"  [cache] hit  '{stage}' -> {path.name}")
         return obj
-    except Exception as exc:  # noqa: BLE001 - any corrupt cache is just a miss
+    except Exception as exc:  # noqa: BLE001
         log_warning(f"  [cache] unreadable cache for '{stage}' ({exc}); recomputing.")
         return None
 
@@ -1456,14 +613,6 @@ def run_or_cached_stage(
     only changes what gets printed.
     """
     _t0 = time.monotonic()
-    # Console "(cache hit)"/"(computed)" + elapsed lines and the run_flag
-    # skip-warning below are engineering diagnostics, not scientific output -
-    # routed through report_development() so publication-mode suppression is
-    # governed by that single helper. The cache status itself is ALWAYS
-    # recorded in _CACHE_STAGE_STATUS regardless of mode, so
-    # qa_summary.json / run_manifest.json / Reproducibility_Report.txt still
-    # carry it for every run. Caching decision and returned value are
-    # unaffected by any of this.
     cached = cache_load(cfg, stage, key)
     if cached is not None:
         _CACHE_STAGE_STATUS[stage] = "cache hit"
@@ -1495,18 +644,12 @@ def run_or_cached_stage(
     return result
 
 
-# CONSTANTS
 EPS            = 1e-12
 
 TEMP_ZERO_GUARD = 1e-9
 
-# Scenario axis label (shared across all scenario figures)
 SCENARIO_AXIS_LABEL = "Scenario intensity (%)"
 
-# Canonical figure filenames
-# Main figures use Figure_NN_<description>.png
-# Supplementary figures use Figure_SNN_<description>.png
-# These constants are used by save_fig() to route to the correct folder.
 
 FIG_ACTUAL_VS_PREDICTED         = "Figure_01_Observed_vs_Predicted.png"
 FIG_MODEL_COMPARISON            = "Figure_S01_Model_Comparison.png"
@@ -1515,10 +658,6 @@ FIG_LST_RESPONSE_TO_NDBI        = "Figure_03_LST_Response_to_NDBI.png"
 FIG_NEGI_SCENARIO_COMPARISON    = "Figure_04_NEGI_Scenario_Comparison.png"
 FIG_NEGI_UNCERTAINTY_BANDS      = "Figure_05_NEGI_Uncertainty_Bands.png"
 FIG_NDVI_CONDITIONAL_BY_NDBI    = "Figure_06_NDVI_Adjusted_Slope_by_NDBI.png"
-# Estimator-level fix: Figure 6 is now the continuous varying-coefficient
-# g(NDBI) curve (plot_ndvi_adjusted_slope_curve), not four independent
-# per-bin regressions. The old four-panel unadjusted plot is kept only as
-# a descriptive supplementary figure under this new filename/title.
 FIG_NDVI_UNADJUSTED_STRATUM_SUPPLEMENT = "Figure_S19_Unadjusted_Within_NDBI_Stratum.png"
 FIG_NDVI_VS_LST                 = "Figure_S02_NDVI_vs_LST.png"
 FIG_NDVI_DECILE_ANALYSIS        = "Figure_S03_NDVI_Decile_Analysis.png"
@@ -1534,22 +673,14 @@ FIG_RESPONSE_SURFACE            = "Figure_S12_Response_Surface.png"
 FIG_SCENARIO2_DATA_SUPPORT      = "Figure_S13_Scenario2_Data_Support.png"
 FIG_NEGI_SCENARIO2_ROBUSTNESS   = "Figure_S14_NEGI_Scenario2_Robustness.png"
 FIG_SENSITIVITY_MAXIMUM_EVALUATED_NEGI = "Figure_S15_Sensitivity_Maximum_Evaluated_NEGI.png"
-# Backward-compatible alias for any external call site that still
-# references the old constant name.
 FIG_SENSITIVITY_OPTIMAL_NEGI    = FIG_SENSITIVITY_MAXIMUM_EVALUATED_NEGI
 FIG_COOLING_SATURATION          = "Figure_S16_Cooling_Saturation_Diagnostic.png"
 FIG_UNCERTAINTY_CONVERGENCE     = "Figure_S17_Uncertainty_Convergence.png"
-# NDVI-LST sign-reversal audit: continuously-adjusted (NDVI + NDBI +
-# Elevation + NDVI:NDBI) companion diagnostic to Figure 6 / Figure S18.
 FIG_NDVI_CONTINUOUS_ADJUSTMENT  = "Figure_S18_NDVI_LST_Continuous_NDBI_Adjustment.png"
-# Filename fixed exactly as requested (engineering-addition figure, not
-# renumbered into the Figure_SNN_ sequence above); still routes through
-# save_fig() into Results/Supplementary like every other non-main figure.
 FIG_SCENARIO2_PERCENTILE_SENSITIVITY = "Scenario2_percentile_sensitivity.png"
 FIG_DECISION_ENVELOPE                = "Figure_S20_Decision_Envelope.png"
 FIG_COST_REGIME_BOUNDARY             = "Figure_S21_Cost_Regime_Boundary.png"
 
-# Set of main-figure filenames - used by save_fig to pick the right folder.
 MAIN_FIGURE_FILENAMES: frozenset[str] = frozenset({
     FIG_ACTUAL_VS_PREDICTED,
     FIG_FEATURE_IMPORTANCE,
@@ -1559,7 +690,6 @@ MAIN_FIGURE_FILENAMES: frozenset[str] = frozenset({
     FIG_NDVI_CONDITIONAL_BY_NDBI,
 })
 
-# Typography constants
 TITLE_SIZE   = 16
 TITLE_WEIGHT = "normal" 
 LABEL_SIZE   = 13
@@ -1579,16 +709,9 @@ STAT_BOX_STYLE: dict = {
 }
 
 
-# LOGGING
 logger = logging.getLogger("negi_framework")
 _LOG_FILE_PATH: Optional[Path] = None
 
-# HEADLINE sits between INFO (20) and WARNING (30). Messages logged at this
-# level are the principal methodological stages and headline metrics that
-# must remain visible in BOTH logging modes; regular log_info/log_debug
-# detail is only visible when cfg.verbose is True. This is a presentation-
-# only mechanism: it does not change what is computed, validated, or
-# exported - only which already-existing messages reach the console.
 HEADLINE_LEVEL = 25
 logging.addLevelName(HEADLINE_LEVEL, "HEADLINE")
 
@@ -1748,24 +871,6 @@ def log_headline(*args) -> None:
     logger.log(HEADLINE_LEVEL, " ".join(str(a) for a in args))
 
 
-# Runtime-diagnostics only (not a scientific result): tracks wall-clock
-# time per pipeline step so a slow run can be attributed to a specific
-# stage from the console/log output alone, without re-running under an
-# external profiler. Previously only the total end-to-end runtime was
-# logged (see write_reproducibility_report), which made "the pipeline is
-# slower than usual" impossible to diagnose from the log.
-#
-# "suppress_next_report": for cacheable stages, run_or_cached_stage()
-# already prints an explicit, more informative status+timing line
-# (e.g. "[STEP 2] XGBoost tuning (cache hit)" / "Elapsed: 0.1 s") the
-# moment that stage resolves. Without this flag, the *next* log_step()
-# call would ALSO print a generic "-> '[STEP 2] ...' took 0.1s" line for
-# the same stage - reporting the same elapsed time twice, once with
-# useful cache context and once without. Setting this flag right after
-# run_or_cached_stage's own report tells the next log_step()/
-# log_step_finish() call to skip its own redundant report for that one
-# stage, while still resetting the timer so the *following* stage's
-# timing starts cleanly from now.
 _STEP_TIMER: dict = {"last_time": None, "last_label": None, "suppress_next_report": False}
 
 
@@ -1801,37 +906,6 @@ def vlog_info(cfg: Config, *args) -> None:
         log_info(*args)
 
 
-# ----------------------------------------------------------------------------
-# CENTRALIZED REPORTING HELPERS (engineering-refinement: single gate for
-# publication-vs-development console behaviour)
-# ----------------------------------------------------------------------------
-# These three functions are the ONLY place that decides whether an
-# engineering/developer message reaches the console. Every cache-status,
-# timing, convergence-diagnostic, or config-sanity message added or touched
-# by this pass is routed through report_development() instead of gating
-# cfg.run_mode inline at each call site. None of the three functions perform,
-# alter, or read back any scientific computation - they only format and
-# route already-computed text/values to the existing logger primitives
-# (log_step/log_info/log_warning/log_headline) defined above.
-#
-#   report_step()        - scientific-pipeline stage boundary. Always
-#                           reported in both run_mode values (a stage header
-#                           is pipeline structure, not an engineering
-#                           diagnostic).
-#   report_warning()      - a warning about the science/data itself (e.g. a
-#                           genuine QA failure) that a reader must see
-#                           regardless of run_mode.
-#   report_development()  - an engineering-only diagnostic (cache hit/miss,
-#                           elapsed timings, convergence-sweep detail, config
-#                           sanity warnings). Printed to console ONLY when
-#                           cfg.run_mode == "development"; unconditionally
-#                           suppressed when cfg.run_mode == "publication".
-#                           The full detail such a message would have shown
-#                           still reaches the structured JSON/report exports
-#                           (run_manifest.json, qa_summary.json,
-#                           uncertainty_convergence.json,
-#                           Reproducibility_Report.txt) independently of this
-#                           function - this only gates the console/log text.
 
 
 def report_step(label: str) -> None:
@@ -1934,7 +1008,6 @@ def format_p_value(p: float) -> str:
     return f"p = {p:.4g}"
 
 
-# METRICS
 def _float_arrays(y_true, y_pred) -> tuple[np.ndarray, np.ndarray]:
     return np.asarray(y_true, dtype=float), np.asarray(y_pred, dtype=float)
 
@@ -2056,7 +1129,6 @@ def compute_metrics(y_true, y_pred) -> dict:
     }
 
 
-# Private metric functions for bootstrap
 def _metric_rmse(y_true, y_pred) -> float:              return compute_rmse(y_true, y_pred)
 def _metric_mae(y_true, y_pred) -> float:               return compute_mae(y_true, y_pred)
 def _metric_bias(y_true, y_pred) -> float:              return compute_bias(y_true, y_pred)
@@ -2117,7 +1189,6 @@ def spatial_block_bootstrap_metrics(
     unique_blocks = np.unique(block_ids)
     n_unique_blocks = len(unique_blocks)
 
-    # Pre-index observations by block for fast repeated lookup.
     block_to_positions = {
         b: np.where(block_ids == b)[0] for b in unique_blocks
     }
@@ -2145,7 +1216,6 @@ def spatial_block_bootstrap_metrics(
     return results
 
 
-# PLOTTING HELPERS
 def apply_plot_style(cfg: Config = CFG) -> None:
     """Apply consistent rcParams for publication-quality figures."""
     mpl.rcParams.update({
@@ -2160,7 +1230,6 @@ def apply_plot_style(cfg: Config = CFG) -> None:
     })
 
 
-# Alias kept for any call site that uses the original name.
 apply_publication_style = apply_plot_style
 
 
@@ -2235,7 +1304,6 @@ def generate_caption(description: str, statistics: Optional[dict] = None) -> str
     return f"{description}. {values}" if values else description
 
 
-# FIGURE REGISTRY
 class FigureRegistry:
     """Tracks every figure saved during a pipeline run for the figure list."""
 
@@ -2267,7 +1335,6 @@ class FigureRegistry:
 FIGURE_REGISTRY = FigureRegistry()
 
 
-# CENTRALIZED FIGURE SAVE
 def save_fig(
     fig,
     filename: str,
@@ -2314,12 +1381,6 @@ def save_fig(
     png_path = png_dir / filename_path.name
     pdf_path = pdf_dir / filename_path.with_suffix(".pdf").name
 
-    # cfg.regenerate_figures=False (item 7 dev-speed switch): skip the
-    # image write when a file already exists on disk from a previous run.
-    # The figure was already built in memory by the caller above this
-    # point either way - only the (comparatively cheap, but nonzero across
-    # ~20 figures) tight_layout+savefig I/O is skipped - so this can never
-    # produce a missing figure, only reuse one that's already correct.
     if cfg.regenerate_figures or not png_path.is_file():
         if use_tight_layout:
             try:
@@ -2343,11 +1404,9 @@ def save_fig(
     return png_path
 
 
-# Alias kept for any call site that still uses export_fig.
 export_fig = save_fig
 
 
-# I/O HELPERS
 def setup_directories(cfg: Config) -> None:
     """Create all output directories (idempotent)."""
     for d in (
@@ -2423,7 +1482,6 @@ def dataframe_to_markdown(df: pd.DataFrame) -> str:
     return "\n".join(lines)
 
 
-# SUMMARY LOG
 class SummaryLog:
     """Accumulates (Section, Quantity, Value) rows during the pipeline run.
 
@@ -2500,15 +1558,6 @@ class SummaryLog:
         return df
 
 
-# INTERPRETATION LIBRARY  (Refactor item 28)
-#
-# Single source of truth for the wording of recurring interpretive
-# statements.  Every call site below (reports, figure captions,
-# Interpretation Notes, Conclusions) pulls its sentence from this
-# dictionary instead of re-typing similar language in multiple places.
-# This section changes NO calculation, threshold value, statistic, or
-# figure - it only ensures identical scientific concepts are always
-# described with identical wording (items 21-28).
 
 INTERPRETATION_LIBRARY: dict[str, str] = {
     "cost_parameter_scope": (
@@ -2716,8 +1765,6 @@ def boundary_distance_fraction(idx: int, positions: Optional[np.ndarray], n_poin
             dist_to_start = abs(float(positions[idx]) - float(positions[0]))
             dist_to_end   = abs(float(positions[-1]) - float(positions[idx]))
             return float(min(dist_to_start, dist_to_end) / abs(span))
-    # Fallback: index-count fraction (identical to the position-based
-    # result whenever the trajectory is evenly spaced).
     dist_to_start = idx
     dist_to_end   = (n_points - 1) - idx
     return float(min(dist_to_start, dist_to_end) / (n_points - 1))
@@ -2750,7 +1797,6 @@ def is_near_trajectory_boundary(
     return boundary_distance_fraction(idx, positions, n_points) <= (tolerance_pct / 100.0)
 
 
-# NAMED INTERPRETATION API
 
 def interpret_model_comparison(cfg: Config = CFG) -> str:
     """Canonical benchmark-comparison disclaimer (item 23): the XGBoost
@@ -2777,7 +1823,6 @@ def interpret_support(feature_support_status: str) -> str:
     return f"{feature_support_status}. " + interpretation_text("feature_support")
 
 
-# PREDICTION CACHE
 class PredictionCache:
     """Caches model.predict() calls keyed on the rounded full feature
     vector - one entry per feature in FEATURES order (NDVI, NDBI,
@@ -2795,10 +1840,6 @@ class PredictionCache:
         self.misses = 0
 
     def _key(self, *feature_values: float) -> tuple:
-        # Exactly len(FEATURES) values, in FEATURES order. Anything else
-        # would silently alias distinct feature vectors onto one key (the
-        # failure mode of the old three-column key once two more predictors
-        # exist), so the arity is enforced.
         if len(feature_values) != len(FEATURES):
             raise ValueError(
                 f"PredictionCache key needs {len(FEATURES)} feature values "
@@ -2834,7 +1875,6 @@ class PredictionCache:
 
 PREDICTION_CACHE = PredictionCache()
 
-# Reproducibility
 def print_reproducibility_info(cfg: Config) -> dict:
     """Log and return the seed, library versions, and git commit for this run."""
     info = {
@@ -3079,11 +2119,6 @@ def build_and_export_run_manifest(
 
     manifest_path = save_json(manifest, cfg.data_dir / "run_manifest.json")
 
-    # Flat CSV mirror - same facts as run_manifest.json,
-    # one row, for consumers that want to grep/diff a metadata file
-    # without a JSON parser. Nested fields (software_versions, cache_status)
-    # are intentionally left to the JSON; this CSV carries the flat,
-    # single-value fields a reviewer is most likely to check at a glance.
     flat_row = {
         "timestamp":               manifest.get("timestamp"),
         "git_hash":                manifest.get("git_hash"),
@@ -3343,13 +2378,6 @@ def build_publication_summary(
     return summary_dict
 
 
-# AUTOMATED QA CHECKS
-#
-# Consistency checks run once, near the end of the pipeline, right before
-# the final exports (item 12).  These do not recompute any statistic - they
-# only compare numbers that are already stored on ValidationResults / the
-# exported DataFrames / FIGURE_REGISTRY against each other, and raise a
-# descriptive AssertionError if two supposedly-identical values disagree.
 
 def run_qa_checks(
     cfg: Config,
@@ -3386,9 +2414,8 @@ def run_qa_checks(
     verification without altering any prior check or any scientific result -
     a QA failure identifies the inconsistency rather than silently
     "fixing" the underlying numbers."""
-    checks = []  # (name, passed, failure_detail)
+    checks = []
 
-    # Calibration slope: report vs. the two exported scenario CSVs.
     for label, df in (
         ("scenario_summary.csv", scenario_summary_df),
         ("scenario_points.csv", scenario_points_df),
@@ -3402,8 +2429,6 @@ def run_qa_checks(
                 f"ValidationResults ({validation.calibration_slope:.6f})."
             ))
 
-    # R² / RMSE must be finite - a NaN silently propagating into a figure or
-    # report is exactly the class of bug this check is meant to catch.
     non_finite = [
         name for name, value in (
             ("nested_cv_r2", validation.nested_cv_r2),
@@ -3418,9 +2443,6 @@ def run_qa_checks(
         f"ValidationResults.{', '.join(non_finite)} not finite." if non_finite else "",
     ))
 
-    # Feature importance ordering: the table must already be sorted
-    # descending (compute_feature_importance sorts it once; this just
-    # confirms nothing downstream re-shuffled it before export).
     importances = fi.table["Importance"].to_numpy()
     fi_sorted = bool(np.all(np.diff(importances) <= 1e-12))
     checks.append((
@@ -3428,7 +2450,6 @@ def run_qa_checks(
         "feature-importance table is not sorted in descending order at export time.",
     ))
 
-    # No duplicated figure/CSV filenames in the figure registry.
     filenames = [row["filename"] for row in FIGURE_REGISTRY._rows]
     dupes = {f for f in filenames if filenames.count(f) > 1}
     checks.append((
@@ -3436,16 +2457,13 @@ def run_qa_checks(
         f"duplicate export filenames detected: {dupes}",
     ))
 
-    # Configuration hash must be a single, stable value already computed once.
     has_hash = bool(repro_info.get("config_sha256"))
     checks.append((
         "Configuration hash present", has_hash,
         "configuration hash missing from repro_info.",
     ))
 
-    # --- Scientific-consistency checks (item 13) ---------------------------
 
-    # 1. No unresolved {placeholder} tokens in any exported text/CSV report.
     placeholder_sources = [scenario_summary_df, scenario_points_df]
     if maximum_diagnostics_df is not None:
         placeholder_sources.append(maximum_diagnostics_df)
@@ -3459,14 +2477,6 @@ def run_qa_checks(
         f"unresolved template placeholder(s) found in exported reports: {unresolved}",
     ))
 
-    # 1b. Cleanup-pass regression test (Task 11 item 7): the deprecated,
-    # circular (Model -> Scenario -> Model -> NEGI) model-guided Scenario 2
-    # endpoint selector, `select_scenario2_empirical_endpoint`, has been
-    # deleted outright rather than merely left unwired - confirm it is
-    # actually gone from the module namespace, so a future re-addition of
-    # that function would be caught here rather than silently reintroducing
-    # the circularity that `select_scenario2_archetype_endpoint` replaced it
-    # to remove.
     _deprecated_selector_absent = "select_scenario2_empirical_endpoint" not in globals()
     checks.append((
         "Deprecated model-guided S2 endpoint selector removed from module",
@@ -3480,7 +2490,6 @@ def run_qa_checks(
         d = maximum_diagnostics_s2
         s2_idx = negi.s2_optimum_idx
 
-        # 2/3. maximum_evaluated_negi / position match the actual trajectory argmax.
         actual_max_negi = float(negi.negi_s2[s2_idx])
         actual_max_pct  = float(negi.scenario_pct[s2_idx])
         checks.append((
@@ -3498,9 +2507,6 @@ def run_qa_checks(
             f"({actual_max_pct}).",
         ))
 
-        # 4/11. Uncertainty reported for the maximum matches the zero-crossing
-        # table's value at the same scenario position (same index, independent
-        # reporting path).
         if zero_crossing_df is not None:
             zc_row = zero_crossing_df[
                 (zero_crossing_df["scenario"] == "Scenario 2")
@@ -3522,15 +2528,12 @@ def run_qa_checks(
                     "at the same scenario position.",
                 ))
 
-        # 5. Uncertainty type must be explicitly identified.
         checks.append((
             "S2 maximum uncertainty type explicitly identified",
             bool(d["maximum_uncertainty_type"]) and d["maximum_uncertainty_type"] != "unavailable",
             "maximum_uncertainty_type is empty or 'unavailable' for Scenario 2.",
         ))
 
-        # 6. IQR (Q25/Q75) must never be reported under the same field as the
-        # 95% interval.
         if d["maximum_q25"] is not None and d["maximum_uncertainty_low"] is not None:
             iqr_not_mislabeled = not (
                 np.isclose(d["maximum_q25"], d["maximum_uncertainty_low"])
@@ -3542,8 +2545,6 @@ def run_qa_checks(
                 "the 95% interval and the IQR must be distinct quantities.",
             ))
 
-        # 12/13/14/15. Robustness language must be consistent with the
-        # underlying uncertainty/stability/support/boundary flags.
         if d["maximum_ci_includes_zero"] is True:
             checks.append((
                 "S2 zero-crossing maximum not classified as robust",
@@ -3573,8 +2574,6 @@ def run_qa_checks(
                 "maximum_robust is True.",
             ))
 
-        # 16/17. scenario_summary.csv values must agree with the stored
-        # maximum-diagnostic object (single source of truth).
         if "s2_max_negi" in scenario_summary_df.columns:
             csv_negi = float(scenario_summary_df["s2_max_negi"].iloc[0])
             checks.append((
@@ -3585,16 +2584,6 @@ def run_qa_checks(
                 f"({d['maximum_evaluated_negi']}).",
             ))
 
-    # --- 95%-label construction checks (item 3) -----------------------------
-    # The "95% spatial-refit uncertainty band" (uncertainty.percentiles /
-    # zero-crossing table / maximum_diagnostics) must actually be built from
-    # the 2.5th/97.5th percentiles that Config.uncertainty_percentiles
-    # defines - not silently substituted with IQR or some other spread.
-    # NOTE: this is deliberately never shortened to "95% spatial band" or
-    # "95% CI" anywhere in the codebase, because that label is distinct from
-    # the spatial-block bootstrap 95% CIs (spatial_block_bootstrap_ci) - the
-    # two are different quantities computed by different procedures and must
-    # not be interchangeable in any export or log line.
     has_25 = 2.5 in cfg.uncertainty_percentiles
     has_975 = 97.5 in cfg.uncertainty_percentiles
     checks.append((
@@ -3605,11 +2594,6 @@ def run_qa_checks(
         "label would not match its construction.",
     ))
 
-    # ci95() is used everywhere a "95% CI" is reported for a repeated-sample
-    # mean (nested-CV folds, repeated spatial-block folds, permutation-
-    # importance outer seeds). Self-test its formula against a known array
-    # so a future accidental edit to the constant/denominator is caught here
-    # rather than silently mislabeling a CI.
     _test_vals = np.array([1.0, 2.0, 3.0, 4.0, 5.0])
     _expected_ci95 = float(1.96 * _test_vals.std(ddof=0) / np.sqrt(_test_vals.size))
     checks.append((
@@ -3619,9 +2603,6 @@ def run_qa_checks(
         f"{_expected_ci95} under the documented 1.96*SD/sqrt(n) definition.",
     ))
 
-    # spatial_block_bootstrap_ci entries claim a "95% CI" via 2.5th/97.5th
-    # percentiles over cfg.bootstrap_iterations resamples - verify the n_boot
-    # actually run matches the configured count for every reported metric.
     boot_ci = getattr(validation, "spatial_block_bootstrap_ci", None) or {}
     mismatched_n_boot = [
         name for name, info in boot_ci.items()
@@ -3635,12 +2616,6 @@ def run_qa_checks(
             f"({cfg.bootstrap_iterations}): {mismatched_n_boot}.",
         ))
 
-    # --- Permutation-importance CI replication level (item 5) ---------------
-    # The CI must be computed across the cfg.n_permutation_outer_seeds
-    # independent outer-seed means (each itself averaged over
-    # cfg.n_permutation_inner_repeats inner repeats) - NOT flattened across
-    # all outer*inner draws, which would treat non-independent inner repeats
-    # as independent replicates and understate the CI.
     wrong_n_repeats = [
         (row["Feature"], row["N_Repeats"])
         for _, row in fi.table.iterrows()
@@ -3653,12 +2628,8 @@ def run_qa_checks(
         f"({cfg.n_permutation_outer_seeds}) for every feature; found: {wrong_n_repeats}.",
     ))
 
-    # --- Targeted QA checks for this revision (Section 7) ------------------
 
     if support is not None:
-        # (a) The locally-sparse threshold must come from the observed/
-        # model-reference feature space, not from either scenario
-        # trajectory's own kNN-distance array.
         obs_derived = (
             support.sparsity_threshold_k is not None
             and not np.isclose(support.sparsity_threshold_k, float(np.median(support.mean_knn_dist_s2)))
@@ -3681,9 +2652,6 @@ def run_qa_checks(
                 f"Scenario 1 trajectory's own median NN distance.",
             ))
 
-        # (b) The configured percentile is applied exactly - not, e.g.,
-        # silently defaulting to Config.support_percentile or some other
-        # hard-coded value.
         checks.append((
             "Configured FEATURE_SPARSITY_PERCENTILE is applied",
             bool(np.isclose(support.sparsity_percentile, cfg.FEATURE_SPARSITY_PERCENTILE)),
@@ -3691,14 +2659,6 @@ def run_qa_checks(
             f"!= Config.FEATURE_SPARSITY_PERCENTILE ({cfg.FEATURE_SPARSITY_PERCENTILE}).",
         ))
 
-        # (b2) Regression guard for the endpoint-density fix: sparsity_threshold_k
-        # must sit STRICTLY BELOW support_threshold_k (else "in_support &
-        # (knn_dist > sparsity_threshold)" is vacuous - a point can never
-        # simultaneously pass formal support and exceed a sparsity threshold
-        # set at or above the support cutoff, which is exactly the silent
-        # always-False bug this fix corrected), and density_moderate_threshold_k
-        # must sit strictly below sparsity_threshold_k so HIGH/MODERATE/LOW
-        # are genuinely nested, non-degenerate bands.
         checks.append((
             "Sparsity threshold is strictly below the formal support threshold (non-vacuous)",
             bool(support.sparsity_threshold_k < support.support_threshold_k),
@@ -3715,8 +2675,6 @@ def run_qa_checks(
             "MODERATE local-density band would be empty by construction.",
         ))
 
-        # (c) Recompute the sparse mask independently from stored arrays and
-        # confirm the count/fraction reported for Scenario 2 matches.
         recomputed_mask = sparse_region_mask(
             support.mean_knn_dist_s2, support.in_support_s2, support.sparsity_threshold_k
         )
@@ -3741,15 +2699,7 @@ def run_qa_checks(
                 f"recomputed fraction ({recomputed_frac}).",
             ))
 
-        # (d) Formal support and local sparsity are separate concepts: a
-        # point can be formally supported and locally sparse at the same
-        # time, and no formally-supported point is ever reclassified as
-        # extrapolation solely for being locally sparse.
         if recomputed_mask is not None:
-            # Assert that sparse points are always a SUBSET of formally
-            # supported points (sparse never overrides / contradicts formal
-            # support, and is never used to reclassify a point as
-            # extrapolation).
             sparse_implies_supported = bool(np.all(support.in_support_s2[recomputed_mask]))
             checks.append((
                 "Locally-sparse points remain within formal kNN support (not reclassified as extrapolation)",
@@ -3759,10 +2709,6 @@ def run_qa_checks(
                 "sparsity must remain separate, non-overriding concepts.",
             ))
 
-        # (e) maximum_locally_sparse (maximum_sparse_region) must correspond
-        # to the NN distance/support status AT the actual NEGI argmax, using
-        # the same empirical threshold - not some other point or a stale
-        # value.
         if maximum_diagnostics_s2 is not None and negi is not None:
             s2_idx = negi.s2_optimum_idx
             expected_sparse_at_max = bool(
@@ -3778,11 +2724,6 @@ def run_qa_checks(
                 f"({expected_sparse_at_max}).",
             ))
 
-    # (f) Spatial-refit count is successfully reported/exported, and reports
-    # the ACTUAL completed refit count - not the configured ceiling
-    # (item N/Y audit: adaptive convergence means these legitimately differ
-    # whenever converged_early is True, so equality-to-ceiling is not a
-    # valid check on its own).
     if "spatial_refit_count" in scenario_summary_df.columns and uncertainty is not None:
         csv_refits = int(scenario_summary_df["spatial_refit_count"].iloc[0])
         actual_refits = int(uncertainty.n_refits_used)
@@ -3805,8 +2746,6 @@ def run_qa_checks(
             "(or uncertainty results unavailable).",
         ))
 
-    # (g) Spatial-refit lower/upper percentiles match the configured
-    # uncertainty percentiles (2.5 / 97.5), not some other spread.
     if {"spatial_refit_lower_percentile", "spatial_refit_upper_percentile"} <= set(scenario_summary_df.columns):
         lo = float(scenario_summary_df["spatial_refit_lower_percentile"].iloc[0])
         hi = float(scenario_summary_df["spatial_refit_upper_percentile"].iloc[0])
@@ -3819,8 +2758,6 @@ def run_qa_checks(
             f"({cfg.uncertainty_percentiles}).",
         ))
 
-    # (h) The spatial-refit uncertainty label must not overclaim a formal
-    # statistical confidence interval.
     if "spatial_refit_uncertainty_type" in scenario_summary_df.columns:
         label_text = str(scenario_summary_df["spatial_refit_uncertainty_type"].iloc[0]).lower()
         not_overclaimed = ("confidence interval" not in label_text) and ("empirical" in label_text or "band" in label_text)
@@ -3831,17 +2768,6 @@ def run_qa_checks(
             "empirical/band framing or claims a formal confidence interval.",
         ))
 
-    # (h2) Two genuinely different quantities exist in this pipeline:
-    #   - spatial_block_bootstrap_ci: a bootstrap-resample 95% CI over
-    #     cfg.bootstrap_iterations resamples (ValidationResults.spatial_block_bootstrap_ci)
-    #   - the spatial-refit uncertainty band: an empirical 2.5th-97.5th
-    #     percentile spread across cfg.n_spatial_refits independent
-    #     spatial-block holdout REFITS (a different sample, different
-    #     procedure, different n).
-    # They must never be labelled with each other's terminology in any
-    # exported text field - "bootstrap" and "spatial-refit" should not
-    # co-occur in the same label/note, and each field should carry only
-    # its own procedure's language.
     _mislabeled_fields = []
     if "spatial_refit_uncertainty_type" in scenario_summary_df.columns:
         txt = str(scenario_summary_df["spatial_refit_uncertainty_type"].iloc[0]).lower()
@@ -3857,8 +2783,6 @@ def run_qa_checks(
             _mislabeled_fields.append(("calibration_metrics.csv Intercept CI note (missing own label)", cal_txt))
     boot_ci_obj = getattr(validation, "spatial_block_bootstrap_ci", None)
     if boot_ci_obj:
-        # The bootstrap-CI dict's own keys must never be named/aliased using
-        # spatial-refit terminology, and vice versa.
         overlap_keys = [k for k in boot_ci_obj if "refit" in str(k).lower()]
         if overlap_keys:
             _mislabeled_fields.append(("validation.spatial_block_bootstrap_ci keys", str(overlap_keys)))
@@ -3869,16 +2793,12 @@ def run_qa_checks(
         f"their own): {_mislabeled_fields}.",
     ))
 
-    # (i) Calibration values must be numerically unchanged by the Section 3
-    # wording edit - only the interpretive sentence changed, not the number.
     checks.append((
         "Calibration slope is finite and unaffected by the wording edit",
         bool(np.isfinite(validation.calibration_slope)),
         "validation.calibration_slope is not finite after the calibration-note wording edit.",
     ))
 
-    # (j) Scenario 1's baseline maximum must never be classified as a
-    # supported intervention optimum.
     if maximum_diagnostics_s1 is not None:
         checks.append((
             "Scenario 1 baseline maximum is not classified as a supported intervention optimum",
@@ -3888,10 +2808,6 @@ def run_qa_checks(
             "supported intervention optimum.",
         ))
 
-    # (k0) Empirical kNN reference distances used for feature-space support
-    # must exclude self-neighbours (item 6): each observation must not be
-    # counted as one of its own k nearest neighbours when the empirical
-    # observed/model-reference distance distribution is built.
     if support is not None:
         checks.append((
             "Empirical kNN reference distances exclude self-neighbours",
@@ -3902,8 +2818,6 @@ def run_qa_checks(
             "in the empirical feature-support reference construction.",
         ))
 
-    # (k) Scenario 2's zero-crossing, near-boundary, locally-unstable
-    # numerical maximum must remain classified as non-robust.
     if maximum_diagnostics_s2 is not None:
         d2 = maximum_diagnostics_s2
         if d2["maximum_ci_includes_zero"] and (d2["maximum_near_boundary"] or d2["maximum_at_boundary"]):
@@ -3914,11 +2828,8 @@ def run_qa_checks(
                 "trajectory boundary, but maximum_robust is True.",
             ))
 
-    # --- Item 4/7/20 audit-driven checks ------------------------------
 
     if data is not None:
-        # (l) No spatial group (spatial_block) appears in both the training
-        # partition and the untouched confirmatory holdout.
         train_groups = set(data.groups_train.unique())
         holdout_groups = set(data.groups.iloc[data.test_idx].unique())
         overlap_train_holdout = train_groups & holdout_groups
@@ -3930,11 +2841,6 @@ def run_qa_checks(
             f"{sorted(overlap_train_holdout)[:10]}.",
         ))
 
-        # (m) No spatial group appears in both the outer-train and
-        # outer-test side of any GroupKFold fold (re-derives the same
-        # deterministic folds used for the nested CV headline metric and
-        # verifies disjointness directly, rather than trusting GroupKFold's
-        # contract implicitly).
         outer_cv = GroupKFold(n_splits=cfg.n_group_kfold_splits)
         fold_leak_details = []
         for fold_id, (tr_idx, te_idx) in enumerate(
@@ -3952,14 +2858,6 @@ def run_qa_checks(
             + "; ".join(fold_leak_details),
         ))
 
-        # (m2) Item 10 holdout-independence invariant: the feature-space
-        # admissibility bounds (feature_min/feature_max) that decide
-        # whether a scenario/counterfactual point is in support must be
-        # derived from the training partition only. This directly checks
-        # DatasetBundle's stored bounds against X_train's own min/max -
-        # if any future edit reintroduces `data.X` (train + holdout) as
-        # the source, this fails immediately rather than silently letting
-        # the confirmatory holdout influence scenario admissibility.
         train_min_match = data.feature_min.equals(data.X_train.min())
         train_max_match = data.feature_max.equals(data.X_train.max())
         checks.append((
@@ -3970,10 +2868,6 @@ def run_qa_checks(
             "feature-space support bounds used to admit scenario points.",
         ))
 
-        # (m3) Same invariant for the empirical support/kNN reference
-        # population: its size must equal the training partition's size,
-        # not the full dataset's, confirming compute_support_diagnostics()
-        # was built on data.X_train rather than data.X.
         if support is not None:
             checks.append((
                 "Support kNN reference distribution sized to training partition",
@@ -3985,9 +2879,6 @@ def run_qa_checks(
                 "partition (possible holdout contamination).",
             ))
 
-    # (n) Spatial-refit uncertainty partitions must be genuinely distinct
-    # (item 7) - a duplicated held-out group set would silently shrink the
-    # effective number of independent refits below cfg.n_spatial_refits.
     if uncertainty is not None and uncertainty.n_unique_partitions is not None:
         n_refits_configured = len(uncertainty.partition_hashes)
         checks.append((
@@ -3998,13 +2889,6 @@ def run_qa_checks(
             "sets detected).",
         ))
 
-    # (o) Fair benchmark comparison (item 1): Random Forest and Gradient
-    # Boosting must each actually have been tuned (Tuning iterations > 0),
-    # spending their own configured budget from cfg. RF and GB intentionally
-    # use different budgets (cfg.n_benchmark_search_iter vs the smaller
-    # cfg.n_benchmark_search_iter_gb, since plain GradientBoostingRegressor
-    # is single-core and far slower per fit) - so this checks each model
-    # against its own budget rather than requiring RF == GB.
     if comparison_df is not None and "Tuning iterations" in comparison_df.columns:
         tuned = comparison_df.set_index("Model")["Tuning iterations"]
         rf_gb_tuned = (
@@ -4027,9 +2911,6 @@ def run_qa_checks(
             "benchmark_comparison.csv contains non-finite R2/RMSE/MAE values.",
         ))
 
-    # (p) No literal "p = 0" (unqualified zero p-value) anywhere in the
-    # exported summary text (item 17) - format_p_value() should always
-    # substitute a bounded "p < ..." statement instead.
     if summary is not None:
         p_eq_zero_pattern = _re.compile(r"p\s*=\s*0(?![\.\d])")
         summary_text_blob = " ".join(
@@ -4043,9 +2924,6 @@ def run_qa_checks(
             "bounded 'p < ...' form instead.",
         ))
 
-    # (q) Moran's I permutation p-value, when computed, must respect its own
-    # achievable floor of 1/(n_permutations+1) - a sanity check on the
-    # permutation-test implementation itself (item 3).
     if spatial_diagnostic is not None and spatial_diagnostic.get("moran"):
         m = spatial_diagnostic["moran"]
         if m.get("n_permutations", 0) > 0:
@@ -4058,7 +2936,6 @@ def run_qa_checks(
                 f"n_permutations={m['n_permutations']}.",
             ))
 
-    # --- Engineering-refinement pass checks (endpoint symmetry / new exports) ---
 
     if endpoint_diagnostics_s2 is not None and negi is not None:
         de = endpoint_diagnostics_s2
@@ -4078,9 +2955,6 @@ def run_qa_checks(
             f"({de['endpoint_scenario_position']}) != negi.scenario_pct[-1] "
             f"({actual_endpoint_pct}).",
         ))
-        # Endpoint stability fields must exist and be populated whenever a
-        # local-stability window was actually available (item 1 requirement:
-        # the endpoint receives the same complete assessment as the maximum).
         stability_fields_present = all(
             k in de for k in
             ("endpoint_local_change", "endpoint_local_sign_change", "endpoint_local_stability")
@@ -4106,9 +2980,6 @@ def run_qa_checks(
                 f"[{ci_lo_actual}, {ci_hi_actual}] at the last index.",
             ))
 
-        # Endpoint robustness report (endpoint_diagnostics.csv) must match
-        # the exact dict used to build the console/JSON reports - guards
-        # against the CSV and the report drifting apart after future edits.
         if endpoint_diagnostics_df is not None and len(endpoint_diagnostics_df) > 0:
             row = endpoint_diagnostics_df.iloc[0]
             mismatches = [
@@ -4132,28 +3003,7 @@ def run_qa_checks(
             "endpoint_diagnostics_s1 missing (Scenario 1 endpoint symmetry not computed).",
         ))
 
-    # --- Maximum/endpoint symmetry QA (robustness-symmetry audit, item 2) --
-    #
-    # build_maximum_diagnostics and build_endpoint_diagnostics both now
-    # delegate their CI extraction, local-stability routine, feature-support
-    # checks, and robustness decision rule to the single shared
-    # evaluate_negi_candidate() function (item 1). These checks verify that
-    # delegation empirically, at runtime, rather than only by code
-    # inspection - they fail QA the moment either wrapper stops being a
-    # pure pass-through of the shared core, which is exactly the class of
-    # future silent divergence a purely structural refactor cannot prevent
-    # on its own.
-    #
-    # Two independent things are verified:
-    #   (a) each wrapper's exported fields match a fresh, independent call
-    #       to evaluate_negi_candidate() at the SAME index it used, and
-    #   (b) the maximum-path wrapper and the endpoint-path wrapper produce
-    #       IDENTICAL CI/stability/support/robust fields when asked to
-    #       evaluate the same index - i.e. "maximum" vs "endpoint" is only
-    #       a difference in WHICH index/bookkeeping is used, never a
-    #       difference in HOW that index is decided to be robust.
     _SYMMETRY_FIELD_MAP = [
-        # (evaluate_negi_candidate key, maximum_diagnostics key, endpoint_diagnostics key)
         ("ci_low",          "maximum_uncertainty_low",      "endpoint_uncertainty_low"),
         ("ci_high",         "maximum_uncertainty_high",     "endpoint_uncertainty_high"),
         ("q25",             "maximum_q25",                  "endpoint_q25"),
@@ -4181,7 +3031,6 @@ def run_qa_checks(
         negi is not None and uncertainty is not None and support is not None
         and maximum_diagnostics_s2 is not None and endpoint_diagnostics_s2 is not None
     ):
-        # (a) Maximum wrapper vs a fresh, independent shared-core call at the same index.
         ref_max = evaluate_negi_candidate(
             negi.s2_optimum_idx, negi.negi_s2, negi.scenario_pct,
             uncertainty.percentiles.get("negi_s2"), support.in_support_s2,
@@ -4219,7 +3068,6 @@ def run_qa_checks(
             f"build_maximum_diagnostics robust flag diverges from evaluate_negi_candidate: {max_divergences}.",
         ))
 
-        # (a) Endpoint wrapper vs a fresh, independent shared-core call at the same index.
         ref_end = evaluate_negi_candidate(
             -1, negi.negi_s2, negi.scenario_pct,
             uncertainty.percentiles.get("negi_s2"), support.in_support_s2,
@@ -4239,11 +3087,6 @@ def run_qa_checks(
             f"build_endpoint_diagnostics diverges from evaluate_negi_candidate: {end_divergences}.",
         ))
 
-        # (b) Cross-check: call BOTH wrappers on the exact same index (the
-        # endpoint's own index) and confirm they reach the same CI /
-        # stability / support / robust fields as each other - i.e. the
-        # maximum-side wrapper and the endpoint-side wrapper are not
-        # allowed to apply a different decision rule to the same point.
         _cross_idx = len(negi.negi_s2) - 1
         via_endpoint_wrapper = build_endpoint_diagnostics(
             "symmetry-cross-check", negi.negi_s2, negi.scenario_pct, _cross_idx,
@@ -4274,9 +3117,6 @@ def run_qa_checks(
             f"build_endpoint_diagnostics at index {_cross_idx} on: {cross_mismatches}.",
         ))
 
-    # Spatial autocorrelation comparison table: must contain the three
-    # requested series and every Moran's I value must be finite when the
-    # comparison could be computed at all.
     if spatial_autocorr_df is not None:
         expected_series = {"Raw observed LST", "Linear Regression residuals", "XGBoost residuals"}
         present_series = set(spatial_autocorr_df["Series"]) if "Series" in spatial_autocorr_df.columns else set()
@@ -4293,10 +3133,6 @@ def run_qa_checks(
                 "spatial_autocorrelation_summary.csv contains a non-finite Moran's I value.",
             ))
 
-    # Task 11: joint multivariate support / spatial block-size sensitivity
-    # QA checks. Trivial-check inflation is deliberately avoided - each
-    # check below verifies a distinct implementation-consistency property
-    # requested in Task 11, not scientific validity.
     if joint_support_df is not None and len(joint_support_df):
         checks.append((
             "Joint-support diagnostics computed for both scenarios",
@@ -4316,13 +3152,6 @@ def run_qa_checks(
             "worst_percentile/endpoint_percentile contain non-finite or negative values.",
         ))
 
-    # Joint-support propagation into headline reporting (Task 1, final
-    # clean-up): protects the format_maximum_classification /
-    # format_endpoint_classification wiring above against a future edit
-    # silently dropping the already-computed Step 10b status or reverting
-    # to the old combined "Feature support = PASS (marginal feature-space
-    # support)" wording. Reuses the same rendering functions already
-    # called in main() - no new diagnostic, no recomputation.
     if (joint_support_df is not None and len(joint_support_df)
             and maximum_diagnostics_s2 is not None and endpoint_diagnostics_s2 is not None):
         _s2_joint_status = joint_support_df.loc[
@@ -4346,10 +3175,6 @@ def run_qa_checks(
             "'Feature support' wording.",
         ))
 
-        # Convergence-caveat propagation: whenever a band excludes zero
-        # while publication convergence has not passed, the persisted
-        # classification text must say so - a reader of the exported
-        # .txt file, not just the console, has to see the caveat.
         _max_needs_caveat = (
             maximum_diagnostics_s2.get("maximum_ci_includes_zero") is False
             and publication_convergence_status not in (None, "STABILIZED")
@@ -4385,9 +3210,6 @@ def run_qa_checks(
             "the block-size sensitivity table.",
         ))
 
-    # publication_summary.json: existence only (content is assembled and
-    # written just before this QA stage runs; a missing file at this point
-    # means the export step itself failed silently).
     if publication_summary_path is not None:
         checks.append((
             "publication_summary.json exists",
@@ -4402,15 +3224,6 @@ def run_qa_checks(
     for name, passed, _ in checks:
         vlog_info(cfg, f"  {name}: {'PASS' if passed else 'FAIL'}")
 
-    # Reviewer fix #1: these are cross-artifact/implementation CONSISTENCY
-    # checks (e.g. "does this CSV agree with that dict"), not a scientific
-    # robustness certification. A bare "N/M checks passed" reads, out of
-    # context, as if the underlying finding had been validated - it hasn't;
-    # that is reported separately (see the NEGI assessment / robustness
-    # sections and their own PASS/FAIL, robust/non-robust, and convergence
-    # verdicts). The wording below says explicitly what this count does
-    # and does not mean; the check logic and count themselves are
-    # unchanged.
     if n_failed == 0:
         log_headline(
             f"Engineering/data-consistency QA: {n_passed}/{len(checks)} checks passed "
@@ -4418,8 +3231,6 @@ def run_qa_checks(
             "which is reported separately)"
         )
     else:
-        # Failures are always shown in full, in both logging modes - a
-        # failure is exactly the information a concise run must not hide.
         failed_names = [name for name, passed, _ in checks if not passed]
         log_headline(
             f"Engineering/data-consistency QA: {n_passed}/{len(checks)} checks passed "
@@ -4428,9 +3239,6 @@ def run_qa_checks(
         )
         log_headline("Failed checks: " + "; ".join(failed_names))
 
-    # Reporting-only export (item 6): a machine-readable QA summary so
-    # regression tests can assert "QA count is unchanged" without scraping
-    # console output. This does not change any check's logic or result.
     qa_summary = {
         "n_total": len(checks),
         "n_passed": n_passed,
@@ -4440,20 +3248,15 @@ def run_qa_checks(
     }
     try:
         save_json(qa_summary, cfg.data_dir / "qa_summary.json")
-    except OSError as exc:  # noqa: BLE001 - export failure must not mask a real QA failure below
+    except OSError as exc:  # noqa: BLE001
         log_warning(f"Could not write qa_summary.json: {exc}")
 
-    # qa_summary.csv (publication-readiness refactor, item 1): one row per
-    # check, mirroring qa_summary.json in tabular form for readers who
-    # prefer to open a spreadsheet rather than parse JSON. Built purely
-    # from `checks`, already assembled above - no check is re-run or
-    # re-evaluated for this export.
     qa_summary_df = pd.DataFrame(
         [{"check": name, "passed": passed, "detail": detail} for name, passed, detail in checks]
     )
     try:
         save_csv(qa_summary_df, cfg.data_dir / "qa_summary.csv")
-    except OSError as exc:  # noqa: BLE001 - export failure must not mask a real QA failure below
+    except OSError as exc:  # noqa: BLE001
         log_warning(f"Could not write qa_summary.csv: {exc}")
 
     failures = [detail for _, passed, detail in checks if not passed]
@@ -4463,7 +3266,6 @@ def run_qa_checks(
     return qa_summary
 
 
-# RESULT CONTAINERS (DATACLASSES)
 @dataclass
 class DatasetBundle:
     df:           pd.DataFrame
@@ -4477,24 +3279,8 @@ class DatasetBundle:
     groups_train: pd.Series
     train_idx:    np.ndarray
     test_idx:     np.ndarray
-    # Holdout-independence (audit item 10): feature_min/feature_max define
-    # the observed feature-space admissibility bounds used to decide
-    # whether a scenario/counterfactual point is "in support" and to
-    # flag out-of-bounds predict_lst() calls. Because those bounds are
-    # part of scenario admissibility (not model evaluation), they are
-    # computed from X_train only - the confirmatory holdout must never
-    # influence which counterfactuals are judged supported.
     feature_min:  pd.Series
     feature_max:  pd.Series
-    # Training-only view of the full dataframe (df.loc[train_idx]).
-    # Every quantity that DEFINES the scenario analysis - baseline
-    # NDVI/NDBI/elevation, the Scenario 2 archetype endpoint, the
-    # Scenario 2 empirical trajectory, and the empirical support/kNN
-    # reference distribution - must be derived from this, never from
-    # `df` (which includes the confirmatory holdout). `df` itself
-    # remains available for diagnostics that legitimately need the full
-    # dataset (e.g. permutation-importance NDVI-NDBI correlation, the
-    # NDBI response-sweep plot, the response-surface plot).
     df_train:     pd.DataFrame
 
 
@@ -4508,8 +3294,8 @@ class ModelResults:
 
 @dataclass
 class ValidationResults:
-    nested_cv_r2:           float   # true outer-fold nested GroupKFold R² (item 1)
-    inner_tuning_r2:        float   # RandomizedSearchCV mean_test_score (inner loop only)
+    nested_cv_r2:           float
+    inner_tuning_r2:        float
     repeated_r2_scores:     np.ndarray
     repeated_rmse_scores:   np.ndarray
     repeated_mae_scores:    np.ndarray
@@ -4523,13 +3309,7 @@ class ValidationResults:
     calibration_intercept:  float
     calibration_bias:       float
     spatial_validation_df:  pd.DataFrame
-    # PRIMARY holdout uncertainty interval: spatial-block bootstrap, which
-    # resamples whole spatial blocks to respect within-block spatial
-    # dependence in the holdout residuals.
     spatial_block_bootstrap_ci: dict = field(default_factory=dict)
-    # SECONDARY / descriptive only: observation-level bootstrap, retained
-    # for comparison. Assumes i.i.d. resampling, which understates
-    # uncertainty given residual spatial autocorrelation (Moran's I).
     bootstrap_ci:           dict = field(default_factory=dict)
 
     @property
@@ -4592,8 +3372,8 @@ class ScenarioTrajectory:
     ndvi:              np.ndarray
     ndbi:              np.ndarray
     elevation:         float
-    st_emis:           float   # fixed reference value (not an intervention variable)
-    st_emsd:           float   # fixed reference value (not an intervention variable)
+    st_emis:           float
+    st_emsd:           float
     lst:               np.ndarray
     out_of_bounds:     np.ndarray
 
@@ -4634,9 +3414,6 @@ class ScenarioBaseline:
     ndvi_target:    float
     fixed_elevation: float
     ndvi_ndbi_corr: float
-    # Fixed reference values of the two emissivity covariates. Like
-    # fixed_elevation, these are held constant along every scenario
-    # trajectory - they are model predictors, NOT intervention variables.
     fixed_st_emis:  float
     fixed_st_emsd:  float
 
@@ -4655,14 +3432,6 @@ class NEGIResults:
     baseline_lst:         float
     delta_t_s1:           np.ndarray
     delta_t_s2:           np.ndarray
-    # Item 9: renamed from `benefit_scale` to make explicit which
-    # mathematical definition of NEGI this implementation enforces - a
-    # FIXED reference scale (the maximum positive predicted cooling from
-    # the primary, full-training fit's Scenario 1/2 trajectories),
-    # shared across every spatial refit used for uncertainty estimation.
-    # It is deliberately NOT recomputed per refit - see compute_negi_results()
-    # and compute_uncertainty_bands() docstrings for the estimand this
-    # enforces and why.
     reference_benefit_scale: float
     desal_energy_sqrt:    np.ndarray
     desal_energy_linear:  np.ndarray
@@ -4710,30 +3479,11 @@ class SupportDiagnostics:
     in_support_s2:       np.ndarray
     extrap_s1_ok:        bool
     extrap_s2_ok:        bool
-    # Empirical local-sparsity reference (Section 1 correction): derived
-    # once from the observed/model-reference kNN-distance distribution in
-    # the same standardized predictor space used for scenario support
-    # assessment - never from the scenario trajectory itself.
     sparsity_percentile: float
     sparsity_threshold_k: float
-    # Second (lower) reference boundary for the three-level local-density
-    # diagnostic (HIGH / MODERATE / LOW) - see classify_local_density().
-    # Computed from the same reference kNN-distance distribution as
-    # sparsity_threshold_k, at Config.DENSITY_MODERATE_PERCENTILE.
     density_moderate_percentile: float
     density_moderate_threshold_k: float
-    # Self-neighbour QA (item 6): True iff, for every observation used to
-    # build the empirical kNN reference distribution, the query point's own
-    # row was the excluded (distance-0) neighbour. Does not affect any
-    # support calculation - reporting/QA only.
     empirical_knn_self_excluded: bool
-    # The full observed/model-reference mean-kNN-distance
-    # distribution (obs_mean_knn_dist) that support_threshold_k,
-    # sparsity_threshold_k, and density_moderate_threshold_k are all
-    # already percentiles OF. Stored here (previously computed and
-    # discarded) purely so a reported endpoint/maximum distance can be
-    # expressed as "Nth percentile of training-density distribution" -
-    # the same reference distribution, not a new one.
     reference_mean_knn_dist: np.ndarray
 
 
@@ -4753,21 +3503,9 @@ class UncertaintyResults:
     table:            pd.DataFrame
     ndbi_range:       np.ndarray = None
     ndbi_sweep_folds: np.ndarray = None
-    partition_hashes:      list = None   # item 7: one hash per spatial refit
-    n_unique_partitions:   int  = None   # item 7: duplicate-partition check
-    model_stochasticity_varied: bool = False  # item 7: explicit uncertainty-source flag
-    # Adaptive-convergence fields (data-driven refit stopping rule).
-    # n_refits_used == negi_s2_folds.shape[0] always (the actual number of
-    # spatial refits fit for this object, whether or not adaptive stopping
-    # fired); kept as an explicit field so downstream code and exports
-    # never have to reach into array shapes to answer "how many refits was
-    # this?". `converged_early` is True iff the adaptive loop stopped
-    # before reaching the configured n_spatial_refits ceiling.
-    # `convergence_checkpoints` is a list of dicts, one per checkpoint
-    # actually evaluated: {refit_count, endpoint_mean_negi, endpoint_ci_lower,
-    # endpoint_ci_upper, endpoint_ci_width, abs_change, pct_change}
-    # (abs_change/pct_change are None for the first checkpoint, which has no
-    # prior checkpoint to compare against).
+    partition_hashes:      list = None
+    n_unique_partitions:   int  = None
+    model_stochasticity_varied: bool = False
     n_refits_used:            int  = None
     converged_early:          bool = None
     convergence_checkpoints:  list = None
@@ -4937,7 +3675,6 @@ def compute_scenario_results(
     )
 
 
-# DATA LOADING & MODEL FITTING
 def load_dataset(cfg: Config) -> pd.DataFrame:
     """Load, validate, and clean the input LST dataset from `cfg.data_path`."""
     if not cfg.data_path.is_file():
@@ -4947,11 +3684,6 @@ def load_dataset(cfg: Config) -> pd.DataFrame:
         )
     df_file = pd.read_csv(cfg.data_path)
     n_file_rows = len(df_file)
-    # Audit (#8): dropna() below runs on ALL columns, BEFORE the purity
-    # filter. Record how many rows it removes solely because of NaNs in
-    # non-model columns (e.g. purity auxiliaries masked for non-vegetated
-    # pixels in GEE) so the "valid population" is never silently narrowed.
-    # Behaviour is unchanged; this is reporting only.
     _model_cols = [c for c in list(FEATURES) + ["LST", "block_id"] if c in df_file.columns]
     _nan_rows = df_file.isna().any(axis=1)
     n_dropna_removed = int(_nan_rows.sum())
@@ -4987,12 +3719,6 @@ def load_dataset(cfg: Config) -> pd.DataFrame:
             )
     print(f"[DATA PROVENANCE] model predictors = {FEATURES}")
 
-    # --- Vegetation purity filter (mixed-pixel fix) --------------------
-    # This block was the missing step in the prior run: the v4 CSV
-    # carried clean_vegetation_flag but nothing ever applied it, so that
-    # run's n=15,158 and every downstream number were byte-identical to
-    # the unfiltered v3 run. Every branch below prints explicitly what
-    # happened, on purpose, so that can't happen silently again.
     n_before_purity_filter = len(df)
     purity_accounting: Optional[dict] = None
     if "clean_vegetation_flag" in df.columns:
@@ -5065,16 +3791,7 @@ def load_dataset(cfg: Config) -> pd.DataFrame:
             f"got {cfg.vegetation_purity_filter!r}."
         )
     if purity_accounting is not None:
-        # Audit #8: replaces the tautological "flag mean (post-filter) = 1.0"
-        # line with pre-filter population accounting. Counts are always
-        # computed on the pre-filter (post-dropna) population, whichever
-        # mode is active; "Dataset type" states what was actually modelled.
         pa = purity_accounting
-        # A flag column with no 0 values means the purity mask was applied
-        # upstream (in GEE, before sampling): the CSV cannot tell us how many
-        # pixels were rejected, and "raw" mode is NOT raw. The GEE v5 export
-        # 'Jeddah_LST_Dataset_2023' is sampled this way; its sibling
-        # 'Jeddah_LST_Dataset_2023_raw' is not.
         pa["flag_has_no_rejections"] = bool(pa["n_rejected"] == 0)
         if pa["flag_has_no_rejections"]:
             _dtype = ("PURIFIED UPSTREAM (flag has no 0 values - filtered in GEE "
@@ -5120,21 +3837,12 @@ def load_dataset(cfg: Config) -> pd.DataFrame:
         df.attrs["purity_accounting"] = pa
         try:
             save_json(pa, cfg.data_dir / "purity_filter_accounting.json", cfg=cfg)
-        except Exception as exc:  # reporting only - never fail the run
+        except Exception as exc:
             log_warning(f"Could not write purity_filter_accounting.json: {exc}")
     else:
         print("[DATA PROVENANCE] clean_vegetation_flag column absent — "
               "confirmed dataset type = RAW (pre-v4 export)")
 
-    # Spatial blocking fix: the PRIMARY grouping used everywhere downstream
-    # (GroupKFold, the confirmatory holdout split, the spatial-block
-    # bootstrap, varying-coefficient df selection) is now derived directly
-    # from the raw lat/lon coordinates at cfg.spatial_block_cell_size_deg,
-    # not from `block_id` (verified to be a ~1km encoding of those same
-    # coordinates - see Config.spatial_block_cell_size_deg docstring for
-    # the full correction). `block_id` itself is left in `df` unchanged
-    # (upstream-assigned; harmless to keep around) but is no longer read
-    # for any grouping/splitting purpose past this point.
     correlogram = estimate_response_correlogram(df, cfg)
     df["spatial_block"] = build_primary_spatial_blocks(df, cfg)
     n_groups = df["spatial_block"].nunique()
@@ -5171,9 +3879,6 @@ def build_dataset_bundle(df: pd.DataFrame, cfg: Config) -> DatasetBundle:
         y_train=y.iloc[train_idx], y_test=y.iloc[test_idx],
         groups_train=groups.iloc[train_idx],
         train_idx=train_idx, test_idx=test_idx,
-        # Item 10 fix: bounds/support that decide whether a scenario point
-        # is admissible must come from the training partition only, not
-        # the confirmatory holdout.
         feature_min=X_train.min(), feature_max=X_train.max(),
         df_train=df.loc[train_idx],
     )
@@ -5293,8 +3998,8 @@ class NestedCVResults:
     resulting model on the untouched outer-test partition. This is
     independent of, and never modifies, the model produced by fit_model().
     """
-    fold_summary:  pd.DataFrame   # one row per outer fold
-    predictions:   pd.DataFrame   # one row per held-out observation
+    fold_summary:  pd.DataFrame
+    predictions:   pd.DataFrame
     outer_r2_mean: float
     outer_r2_std:  float
 
@@ -5573,7 +4278,6 @@ def paired_fold_comparison(
     return paired_df
 
 
-# VALIDATION
 def evaluate_model(
     model_results: ModelResults, cfg: Config, summary: SummaryLog,
     nested_cv: "NestedCVResults",
@@ -5582,7 +4286,6 @@ def evaluate_model(
     model, data = model_results.model, model_results.data
     X, y, groups = data.X, data.y, data.groups
 
-    # Fail-fast assertions before any computation.
     assert np.all(np.isfinite(X.values)),    "Feature matrix contains non-finite values."
     assert np.all(np.isfinite(y.values)),    "Target vector contains non-finite values."
     assert len(X) == len(y) == len(groups),  "X, y, and groups must have the same length."
@@ -5592,13 +4295,6 @@ def evaluate_model(
         test_size=cfg.holdout_test_size,
         random_state=cfg.random_seed,
     )
-    # Perf fix: cross_val_score() refits the model independently for every
-    # call, so three separate calls (R2/RMSE/MAE) previously refit the model
-    # 3x per fold (30 fits for 10 folds) just to read off different metrics
-    # from what is otherwise the identical fitted model per fold.
-    # cross_validate() with multiple scorers refits once per fold and
-    # returns all three metrics from that single fit - same folds, same
-    # underlying fits, same numeric results, 1/3 the model fits.
     def _build_and_fit(n_jobs: int):
         return cross_validate(
             model, X, y, groups=groups, cv=spatial_repeats,
@@ -5734,11 +4430,6 @@ def evaluate_model(
         "r2":                    _metric_r2,
     }
 
-    # PRIMARY: spatial-block bootstrap. Reuses the same spatial_block grouping
-    # already used for GroupKFold / GroupShuffleSplit elsewhere in the
-    # pipeline, resampling whole holdout blocks (with replacement) rather
-    # than individual observations, to better respect within-block spatial
-    # dependence in the holdout residuals (see Moran's I diagnostic).
     holdout_block_ids = data.groups.iloc[data.test_idx].to_numpy()
 
     def _compute_bootstrap_cis():
@@ -5852,7 +4543,6 @@ def evaluate_model(
     )
 
 
-# RESIDUAL DIAGNOSTICS
 def compute_residual_diagnostics(
     validation: ValidationResults, data: DatasetBundle
 ) -> ResidualDiagnostics:
@@ -5867,11 +4557,6 @@ def compute_residual_diagnostics(
     skewness = scipy_stats.skew(residuals_arr)
     kurtosis = scipy_stats.kurtosis(residuals_arr)
 
-    # Breusch-Pagan statistic is computed exactly once, by the single
-    # shared _breusch_pagan_test() implementation (item 1 / item 23), so
-    # that every report and figure referring to "the Breusch-Pagan test"
-    # is describing the same computation rather than two similar-looking
-    # but separately implemented statistics.
     bp = _breusch_pagan_test(np.zeros_like(pred), pred, residuals_arr)
 
     spearman_corr, spearman_p = scipy_stats.spearmanr(np.abs(residuals_arr), pred)
@@ -5908,18 +4593,11 @@ def report_residual_diagnostics(
     summary.log("Residual diagnostics", "Residual skewness",          f"{resid.skewness:.4f}")
     summary.log("Residual diagnostics", "Residual kurtosis (excess)", f"{resid.kurtosis:.4f}")
 
-    # This is the single Breusch-Pagan statistic used throughout the report
-    # and figures (item 23) - `resid.bp_method` names which implementation
-    # produced it (statsmodels when available, otherwise the equivalent
-    # auxiliary-regression computation), so it is never mistaken for a
-    # second, independently computed test.
     log_info(f"\nBreusch-Pagan test ({resid.bp_method}): "
              f"statistic = {resid.bp_statistic:.4f}, p = {resid.bp_p_value:.4g}")
     log_info(f"Spearman |resid| vs pred: rho = {resid.spearman_rho:.4f}, "
              f"p = {resid.spearman_p:.4g}")
 
-    # Report heteroscedasticity proportionately: large-sample detection
-    # with a weak effect size is flagged as practically minor.
     if resid.bp_p_value < 0.05 or resid.spearman_p < 0.05:
         if abs(resid.spearman_rho) < 0.15:
             log_info(
@@ -5971,10 +4649,6 @@ def build_spatial_grid_blocks(
         raise ValueError(f"cell_size_deg must be positive, got {cell_size_deg}.")
     x_idx = np.floor(x / cell_size_deg).astype(np.int64)
     y_idx = np.floor(y / cell_size_deg).astype(np.int64)
-    # Vectorized string join is slow in a Python loop at n~30k but still
-    # sub-second; kept as plain strings so this groups identically to the
-    # old block_id (object dtype) wherever it's consumed downstream
-    # (GroupKFold/GroupShuffleSplit only need hashable, comparable labels).
     return np.array([f"{a}_{b}" for a, b in zip(x_idx, y_idx)])
 
 
@@ -6099,11 +4773,6 @@ def estimate_response_correlogram(df: pd.DataFrame, cfg: Config) -> pd.DataFrame
         })
     table = pd.DataFrame(rows)
 
-    # Report the approximate distance at which the estimate first drops to
-    # <=0.1 (a conventional "practically decorrelated" threshold), reading
-    # down the bin midpoints in order - purely descriptive, used only to
-    # log a human-readable summary, not to set spatial_block_cell_size_deg
-    # automatically (that stays an explicit, reviewed Config default).
     below = table[(table["autocorrelation"] <= 0.1) & table["n_pairs"].gt(0)]
     decorrelation_km = float(below["bin_mid_km"].iloc[0]) if len(below) else np.nan
     log_info(
@@ -6149,28 +4818,14 @@ def global_morans_i(
         }
 
     _t_knn = time.perf_counter()
-    # algorithm='kd_tree' forced explicitly: coords is always exactly 2
-    # columns (x, y), for which kd_tree is always the efficient choice.
-    # Leaving this on sklearn's 'auto' selection lets it fall back to a
-    # brute-force O(n^2) neighbour search for some coordinate
-    # distributions (e.g. many duplicate/near-duplicate points), which is
-    # the most likely cause of an apparent freeze on larger holdout sets -
-    # kd_tree never falls back to brute force for 2D data.
     nn = NearestNeighbors(n_neighbors=k_eff + 1, algorithm="kd_tree").fit(coords)
     _, neighbor_idx = nn.kneighbors(coords)
-    neighbor_idx = neighbor_idx[:, 1:]   # drop self
+    neighbor_idx = neighbor_idx[:, 1:]
     log_info(f"  [TIMING] global_morans_i: kNN fit+query (n={n}): "
              f"{time.perf_counter() - _t_knn:.2f}s")
 
     z = values - values.mean()
 
-    # Sparse row-standardised k-NN weight matrix W (n x n). Only k nonzero
-    # entries per row exist by construction, so building this as a dense
-    # (n, n) array - as before - forces O(n^2) memory and O(n^2) arithmetic
-    # for s1/s2/adjacency below, which becomes the dominant runtime cost on
-    # larger residual sets. Every quantity computed from W here is
-    # algebraically identical to the dense version; only the representation
-    # changed (perf fix, not a scientific-result change).
     _t_w = time.perf_counter()
     row_idx = np.repeat(np.arange(n), k_eff)
     col_idx = neighbor_idx.ravel()
@@ -6214,17 +4869,7 @@ def global_morans_i(
         if np.isfinite(z_score) else float("nan")
     )
 
-    # Number of weakly-connected components (and islands = isolated nodes
-    # with a component size of 1) in the symmetrised kNN adjacency graph.
-    # Documented per item 3; a kNN graph is directed by construction (i has
-    # j as a neighbour need not imply j has i), so we symmetrise before
-    # checking connectivity. Stays sparse throughout (see perf note above).
     _t_cc = time.perf_counter()
-    # Built directly from the same row_idx/col_idx used for W, rather than
-    # via (W != 0).maximum((W != 0).T) - sparse boolean comparison and
-    # .maximum() require an internal sort/dedupe pass whose cost is harder
-    # to predict on large n; building straight from the known index arrays
-    # is equivalent and strictly cheaper.
     adjacency = csr_matrix(
         (np.ones(row_idx.shape, dtype=np.int8), (row_idx, col_idx)), shape=(n, n)
     )
@@ -6248,10 +4893,6 @@ def global_morans_i(
 
     if n_permutations > 0:
         if n > max_n_for_permutation:
-            # Computationally infeasible at this n for the permutation loop
-            # below (O(n*k) per permutation, but the loop itself gets slow
-            # in plain Python at very large n) - explicitly disclosed rather
-            # than silently skipped or forced through at prohibitive cost.
             result["n_permutations"] = 0
             result["permutation_p_value"] = float("nan")
             result["permutation_skipped_reason"] = (
@@ -6265,7 +4906,7 @@ def global_morans_i(
             heartbeat_every = max(1, n_permutations // 10)
             for p_idx in range(n_permutations):
                 z_perm = rng.permutation(z)
-                neighbor_sum = z_perm[neighbor_idx].sum(axis=1)  # O(n*k)
+                neighbor_sum = z_perm[neighbor_idx].sum(axis=1)
                 numerator_perm = float(np.dot(z_perm, neighbor_sum)) / k_eff
                 perm_i[p_idx] = (n / s0) * safe_divide(
                     np.array([numerator_perm]), np.array([denominator]), fill=0.0
@@ -6279,11 +4920,6 @@ def global_morans_i(
             log_info(f"  [TIMING] global_morans_i: permutation loop "
                      f"({n_permutations} perms, n={n}): "
                      f"{time.perf_counter() - _t_perm:.2f}s")
-            # Two-sided permutation p-value referenced to the expected value
-            # under complete spatial randomness, with the standard +1/+1
-            # correction so the minimum achievable p-value is exactly
-            # 1/(n_permutations+1) - never printed/rounded to exactly 0
-            # (item 17).
             observed_extremity = abs(morans_i - expected_i)
             perm_extremity = np.abs(perm_i - expected_i)
             perm_p = (1 + np.sum(perm_extremity >= observed_extremity)) / (n_permutations + 1)
@@ -6295,10 +4931,6 @@ def global_morans_i(
     return result
 
 
-# Interpretive-only extension of the existing Global Moran's I diagnostic.
-# Does not touch Global Moran's I itself or any bootstrap calculation; it
-# only translates I into an approximate effective sample size for
-# interpretive reporting.
 def compute_effective_sample_size(n: int, morans_i: float) -> dict:
     """Approximate effective sample size under positive spatial
     autocorrelation, n_eff = n * (1 - I) / (1 + I).
@@ -6314,8 +4946,6 @@ def compute_effective_sample_size(n: int, morans_i: float) -> dict:
             "n": n, "morans_i": float(morans_i) if np.isfinite(morans_i) else float("nan"),
             "n_eff": float("nan"), "reduction_pct": float("nan"),
         }
-    # Guard against I -> -1, which would blow the ratio up; clip to a
-    # sane range for a purely descriptive statistic.
     i_clipped = float(np.clip(morans_i, -0.999, 0.999))
     n_eff = n * safe_divide(
         np.array([1.0 - i_clipped]), np.array([1.0 + i_clipped]), fill=float(n)
@@ -6373,18 +5003,11 @@ def compute_residual_spatial_diagnostic(
         )
     elif moran.get("permutation_skipped_reason"):
         log_info(f"  Permutation inference skipped: {moran['permutation_skipped_reason']}")
-    # Prefer the permutation-based p-value for the significance flag when
-    # available (item 3: "prefer a permutation-based inference procedure
-    # over relying only on a normal approximation"); fall back to the
-    # normal-approximation p-value otherwise. Both are always exported.
     inference_p = (
         moran["permutation_p_value"] if moran["n_permutations"] > 0
         else moran["p_value"]
     )
     significant_p = np.isfinite(inference_p) and inference_p < 0.05
-    # Magnitude-based flag (item 21): a configurable threshold on |Moran's I|
-    # itself, independent of the significance test above.  Interpretation
-    # only - the statistic and its p-value are unchanged.
     exceeds_magnitude = (
         np.isfinite(moran["morans_i"])
         and moran["morans_i"] > cfg.moran_i_magnitude_threshold
@@ -6419,15 +5042,6 @@ def compute_residual_spatial_diagnostic(
                 f"connected components={moran['n_connected_components']} "
                 f"(islands={moran['n_islands']})")
 
-    # Interpretive diagnostic only: an approximate effective-sample-size
-    # heuristic under residual spatial autocorrelation. This is NOT a
-    # formally justified spatial effective-sample-size estimator, so - per
-    # methodological review - it is kept out of the primary console output
-    # and the manuscript-oriented summary tables. The spatial-block
-    # bootstrap (336 unique holdout blocks) is the primary method for
-    # quantifying uncertainty associated with spatial dependence; see
-    # ValidationResults.spatial_block_bootstrap_ci. The bootstrap procedure
-    # itself is untouched by this diagnostic either way.
     n_eff_result = compute_effective_sample_size(len(residuals), moran["morans_i"])
     if cfg.debug and np.isfinite(n_eff_result["n_eff"]):
         log_debug(
@@ -6511,15 +5125,11 @@ def compute_spatial_autocorrelation_summary(
     n_perm    = cfg.moran_n_permutations if cfg.run_moran_permutations else 0
     perm_seed = cfg.moran_permutation_seed
 
-    # Raw observed LST - same holdout points/coordinates as the residual diagnostic.
     moran_raw = global_morans_i(
         data.y_test.values, x_vals, y_vals, k=k,
         n_permutations=n_perm, permutation_seed=perm_seed,
     )
 
-    # Linear Regression residuals: a fresh, untuned LR fit on the same
-    # train/test split (DatasetBundle) used throughout the pipeline, solely
-    # to read off its holdout residuals for this comparison row.
     lr_model = LinearRegression()
     lr_model.fit(data.X_train, data.y_train)
     lr_residuals = data.y_test.values - lr_model.predict(data.X_test)
@@ -6528,8 +5138,6 @@ def compute_spatial_autocorrelation_summary(
         n_permutations=n_perm, permutation_seed=perm_seed,
     )
 
-    # XGBoost residuals: reused verbatim from the already-computed
-    # residual spatial diagnostic - never recomputed here.
     moran_xgb = spatial_diagnostic["moran"]
 
     out = pd.DataFrame([
@@ -6611,7 +5219,6 @@ def compute_calibration_table(
     }])
 
 
-# MODEL COMPARISON
 def _replay_benchmark_reporting(
     comparison_df: pd.DataFrame, cfg: Config, summary: SummaryLog,
 ) -> None:
@@ -6747,15 +5354,6 @@ def compare_models(
 
     comparison_df = pd.DataFrame(rows).sort_values("R2", ascending=False).reset_index(drop=True)
 
-    # Restore the paired fold-level comparison (Refactor item 2): whenever
-    # XGBoost isn't the clear winner of the equal-budget comparison above,
-    # re-run the runner-up model through the same outer GroupKFold splits
-    # XGBoost's own nested CV used, so the two models are compared fold-
-    # for-fold rather than only on a single holdout split. Linear Regression
-    # has no hyperparameters to search, so it's excluded from this check;
-    # in practice the runner-up here is always Random Forest or Gradient
-    # Boosting. The per-fold comparison is merged into comparison_df /
-    # benchmark_comparison.csv below rather than exported as its own file.
     best_row_preview = comparison_df.iloc[0]
     xgb_row_preview   = comparison_df.loc[comparison_df["Model"] == "XGBoost"].iloc[0]
     xgb_is_best_preview = bool(best_row_preview["Model"] == "XGBoost")
@@ -6801,12 +5399,6 @@ def compare_models(
             np.all(paired_df["delta_r2"] > 0) or np.all(paired_df["delta_r2"] < 0)
         )
 
-    # Publication console (robustness-symmetry audit, item 5): manuscript-
-    # facing runs print only a completion line, never the individual
-    # per-model R² values, to the console/log. This is presentation-only -
-    # comparison_df itself, its full export to benchmark_comparison.csv below,
-    # and every downstream use of it (QA checks, summary report, figures)
-    # are completely unaffected by cfg.run_mode.
     if cfg.run_mode == "publication":
         log_info("\nBenchmark comparison completed.")
     else:
@@ -6818,10 +5410,6 @@ def compare_models(
         interpret_model_comparison(cfg),
     )
 
-    # Only claim XGBoost is "best" if it actually tops the fair, equal-budget
-    # comparison; otherwise report the actual best model. This is derived
-    # from comparison_df rather than hard-coded (item 1: "only claim
-    # XGBoost performs best if it actually does under the fair comparison").
     best_row = best_row_preview
     xgb_row  = xgb_row_preview
     xgb_is_best = xgb_is_best_preview
@@ -6883,7 +5471,6 @@ def find_unresolved_placeholders(*sources) -> list[str]:
             texts = [str(source)]
         for text in texts:
             hits.extend(_PLACEHOLDER_PATTERN.findall(text))
-    # de-duplicate while preserving order for a readable failure message
     seen: list[str] = []
     for h in hits:
         if h not in seen:
@@ -6972,7 +5559,6 @@ def classify_local_density(
             if z <= cfg.local_density_z_moderate:
                 return "MODERATE"
             return "LOW"
-    # Fallback: original percentile-threshold-VALUE comparison.
     if moderate_threshold is None or sparse_threshold is None:
         return None
     if knn_dist <= moderate_threshold:
@@ -7078,7 +5664,6 @@ def _compute_local_stability(negi_arr: np.ndarray, idx: int, cfg: Config) -> dic
     )
     original_stable = not (sign_flip or (biggest_jump > cfg.trajectory_stability_jump_threshold))
 
-    # Wider-window maximum local derivative (recommendation 6).
     cv_steps = max(steps, int(cfg.trajectory_stability_cv_window_steps))
     lo = max(0, idx - cv_steps)
     hi = min(n - 1, idx + cv_steps)
@@ -7154,22 +5739,16 @@ def evaluate_negi_candidate(
         idx = n + idx
 
     at_edge       = idx == 0 or idx == n - 1
-    # Review-pass fix (recommendation 7): pass the actual scenario
-    # positions through so "near boundary" is measured as a real
-    # distance-to-nearest-endpoint fraction rather than an index-count
-    # band (see boundary_distance_fraction / is_near_trajectory_boundary).
     near_boundary = is_near_trajectory_boundary(
         idx, n, cfg.scenario_boundary_tolerance_pct, positions=scenario_pct,
     )
 
-    # Local stability - identical neighbour window/threshold for every caller.
     stability            = _compute_local_stability(negi_arr, idx, cfg)
     biggest_jump         = stability["biggest_jump"]
     sign_flip            = stability["sign_flip"]
     locally_stable       = stability["locally_stable"]
     max_local_derivative = stability["max_local_derivative"]
 
-    # Uncertainty - 95% empirical spatial-refit interval AND Q25/Q75 kept separate.
     if uncertainty_percentiles is not None:
         p        = uncertainty_percentiles
         ci_low   = float(p[2.5][idx])
@@ -7177,11 +5756,6 @@ def evaluate_negi_candidate(
         q25      = float(p[25.0][idx])
         q75      = float(p[75.0][idx])
         ci_includes_zero = bool(ci_low <= 0.0 <= ci_high)
-        # Item N audit: report the ACTUAL number of refits behind this
-        # interval when the caller supplies it (uncertainty.n_refits_used) -
-        # adaptive convergence can stop before cfg.n_spatial_refits (the
-        # ceiling), so falling back to the ceiling here would misreport a
-        # legitimately early-converged run as if it used the full ceiling.
         n_refits = actual_n_refits if actual_n_refits is not None else cfg.n_spatial_refits
         uncertainty_type  = (
             f"empirical spatial-refit 95% interval (2.5th-97.5th percentile "
@@ -7194,26 +5768,16 @@ def evaluate_negi_candidate(
         uncertainty_type  = "unavailable"
         n_refits = None
 
-    # Feature-space support at this position specifically.
     if support_in_array is not None:
         knn_support   = bool(support_in_array[idx])
         knn_dist      = float(support_knn_array[idx]) if support_knn_array is not None else None
         sparse_mask   = sparse_region_mask(support_knn_array, support_in_array, sparsity_threshold)
         sparse_region = bool(sparse_mask[idx]) if sparse_mask is not None else None
-        # Review-pass fix (recommendation 8): classify_local_density() now
-        # takes the raw reference distribution so it can classify by
-        # z-score; the two threshold VALUES are still passed as a
-        # fallback (see that function's docstring).
         local_density = classify_local_density(
             knn_dist, reference_knn_distribution, cfg,
             moderate_threshold=density_moderate_threshold,
             sparse_threshold=sparsity_threshold,
         )
-        # Express knn_dist as a percentile of the SAME
-        # reference distribution sparsity_threshold/density_moderate_threshold
-        # were themselves derived from (SupportDiagnostics.reference_mean_knn_dist),
-        # so the HIGH/MODERATE/LOW label has a concrete, independently
-        # checkable number attached instead of standing alone.
         knn_distance_percentile = (
             float((reference_knn_distribution <= knn_dist).mean() * 100.0)
             if (knn_dist is not None and reference_knn_distribution is not None)
@@ -7225,15 +5789,6 @@ def evaluate_negi_candidate(
         knn_distance_percentile = None
         density_z = None
 
-    # Robustness decision rule (recommendation 4): expressed as one
-    # weighted score compared against `cfg.robustness_score_threshold`
-    # instead of a hand-written `and`/`or` chain, while remaining
-    # BIT-FOR-BIT IDENTICAL to the original rule ("CI excludes zero AND
-    # locally stable AND in support"). Each of the three components below
-    # is unambiguous (exactly 0.0 or 1.0) whenever its input is available,
-    # so at threshold 0.99 `core_score >= threshold` is true iff all three
-    # pass - exactly the old boolean rule - while giving future edits one
-    # formula to change instead of several scattered conditionals.
     ci_component        = None if ci_includes_zero is None else (0.0 if ci_includes_zero else 1.0)
     support_component   = None if knn_support is None else (1.0 if knn_support else 0.0)
     stability_component = None if locally_stable is None else (1.0 if locally_stable else 0.0)
@@ -7244,16 +5799,6 @@ def evaluate_negi_candidate(
     core_score = compute_robustness_score(core_components, core_weights)
     robust = None if core_score is None else bool(core_score >= cfg.robustness_score_threshold)
 
-    # Full, five-component score - purely an ADDITIONAL internal
-    # diagnostic that also folds in boundary proximity and local density.
-    # It never gates `robust` itself: boundary proximity has always been
-    # handled as a separate concept downstream (build_maximum_diagnostics'
-    # `maximum_supports_interior_optimum`), and local density has always
-    # been reporting-only - entangling either into `robust` would silently
-    # change what "robust" has meant throughout this pipeline's exports
-    # and regression tests. `robustness_score` is exposed for future
-    # maintenance (e.g. ranking several candidates) without disturbing any
-    # existing classification.
     boundary_component = 0.0 if near_boundary else 1.0
     if density_z is None:
         density_component = None
@@ -7349,9 +5894,6 @@ def build_maximum_diagnostics(
         actual_n_refits=actual_n_refits,
     )
 
-    # Supported interior optimum (Level 3): requires robustness AND
-    # not being at/near the evaluated trajectory boundary. Maximum-only -
-    # an endpoint has no "interior optimum" concept by construction.
     if r["robust"] is None:
         supports_interior_optimum = None
     else:
@@ -7374,20 +5916,9 @@ def build_maximum_diagnostics(
         "maximum_ci_includes_zero":         r["ci_includes_zero"],
         "maximum_local_stability":          r["locally_stable"],
         "maximum_local_largest_change":     r["biggest_jump"],
-        # Newly exposed by this audit: sign_flip was already computed for
-        # the maximum (via the shared stability routine) but previously
-        # dropped before export, while the endpoint's equivalent field
-        # (endpoint_local_sign_change) was exported. Both now report the
-        # same underlying value that was always being computed - no
-        # scientific quantity changes, only a previously-silent field
-        # becomes visible, restoring true reporting symmetry.
         "maximum_local_sign_change":        r["sign_flip"],
         "maximum_knn_distance":             r["knn_distance"],
         "maximum_knn_distance_percentile":  r["knn_distance_percentile"],
-        # Same k already used to compute knn_distance
-        # (Config.support_knn_k) - exposed so the HIGH/MODERATE/LOW density
-        # label can be reported alongside the concrete numbers it is based
-        # on, not just the qualitative word.
         "maximum_knn_k":                    cfg.support_knn_k,
         "maximum_knn_support":              r["knn_support"],
         "maximum_sparse_region":            r["sparse_region"],
@@ -7457,10 +5988,6 @@ def build_endpoint_diagnostics(
         "endpoint_local_sign_change":        r["sign_flip"],
         "endpoint_knn_distance":             r["knn_distance"],
         "endpoint_knn_distance_percentile":  r["knn_distance_percentile"],
-        # Same k already used to compute knn_distance
-        # (Config.support_knn_k) - exposed so the HIGH/MODERATE/LOW density
-        # label can be reported alongside the concrete numbers it is based
-        # on, not just the qualitative word.
         "endpoint_knn_k":                    cfg.support_knn_k,
         "endpoint_knn_support":              r["knn_support"],
         "endpoint_sparse_region":            r["sparse_region"],
@@ -7478,20 +6005,10 @@ def classify_endpoint_interpretation(d: dict) -> str:
         sign = "positive" if d["endpoint_evaluated_negi"] > 0 else "negative"
         return f"Statistically supported {sign} endpoint"
     if d["endpoint_robust"] is False:
-        # Report only the condition(s) that actually failed - do not list
-        # "locally unstable" (or any other candidate reason) when that
-        # specific check passed. `robust` is False whenever any of these
-        # three checks fails; each is reported iff it is the one that
-        # actually failed for this endpoint.
         reasons = []
         if d["endpoint_ci_includes_zero"]:
             reasons.append("uncertainty band crosses zero")
         if d["endpoint_local_stability"] is False:
-            # Neutral wording (avoids a mechanistic reading such as "cost
-            # overtakes benefit" for what is, numerically, a sign change
-            # across an unstable/unsupported neighbourhood): report the
-            # instability and, if present, the sign change as two
-            # descriptive facts rather than a causal narrative.
             reasons.append(
                 "locally unstable, including a sign change across neighbouring "
                 "evaluated points"
@@ -7619,10 +6136,6 @@ def format_endpoint_headline(
                 "convergence is reached."
             )
     if d["endpoint_knn_support"] is not None:
-        # "PASS" on its own reads to a reviewer as "in the
-        # joint density of the training data". It only means the point is
-        # not classified as extrapolation under the marginal kNN-distance
-        # check - not the same claim. Same computed boolean, clearer label.
         support_label = "PASS" if d["endpoint_knn_support"] else "FAIL"
         lines.append(f"    Marginal feature support = {support_label}")
         lines.append(
@@ -7630,13 +6143,6 @@ def format_endpoint_headline(
             f"{joint_support_status if joint_support_status is not None else 'NOT AVAILABLE'}"
         )
     if d.get("endpoint_local_density") is not None:
-        # A percentile of the reference training-density
-        # distribution is far easier to sanity-check than an isolated
-        # standardized-space distance - same knn_distance value
-        # classify_local_density() was given, now expressed relative to
-        # where it falls in the same reference distribution
-        # sparsity_threshold/density_moderate_threshold were themselves
-        # derived from (SupportDiagnostics.reference_mean_knn_dist).
         if (d.get("endpoint_knn_distance") is not None
                 and d.get("endpoint_knn_distance_percentile") is not None):
             lines.append(
@@ -7694,11 +6200,6 @@ def format_maximum_classification(
         else ("STABLE" if d["maximum_local_stability"] else "UNSTABLE")
     )
     if d["maximum_knn_support"] is None:
-        # Scenario 1 has no per-point kNN support array at all (see
-        # build_maximum_diagnostics call sites), so this is N/A rather than
-        # a failed diagnostic. When the maximum sits at the 0% baseline
-        # specifically, say so explicitly to avoid implying support
-        # diagnostics were attempted and failed.
         support = (
             "N/A \u2014 baseline condition"
             if np.isclose(d["maximum_scenario_position"], 0.0)
@@ -7821,9 +6322,6 @@ def format_maximum_headline(
                 "convergence is reached."
             )
     if d["maximum_knn_support"] is not None:
-        # See the matching note in format_endpoint_headline -
-        # "PASS" alone reads as joint-density support to a reviewer; it's
-        # only the marginal kNN-distance check. Same boolean, clearer label.
         support_label = "PASS" if d["maximum_knn_support"] else "FAIL"
         lines.append(f"    Marginal feature support = {support_label}")
         lines.append(
@@ -7831,10 +6329,6 @@ def format_maximum_headline(
             f"{joint_support_status if joint_support_status is not None else 'NOT AVAILABLE'}"
         )
     if d.get("maximum_local_density") is not None:
-        # See the matching note in format_endpoint_headline -
-        # same knn_distance value classify_local_density() was given, now
-        # expressed as a percentile of the reference training-density
-        # distribution instead of standing alone.
         if (d.get("maximum_knn_distance") is not None
                 and d.get("maximum_knn_distance_percentile") is not None):
             lines.append(
@@ -7855,23 +6349,8 @@ def format_maximum_headline(
     if d["maximum_robust"] is not None:
         lines.append(f"    Robust maximum = {'YES' if d['maximum_robust'] else 'NO'}")
     interpretation = classify_maximum_interpretation(d)
-    # For the weakest of the three interpretation levels
-    # ("Numerical maximum only" - i.e. not statistically robust and/or not
-    # an interior optimum), a bare "Interpretation = NUMERICAL MAXIMUM
-    # ONLY" line sitting apart from the value invites a reader to skim past
-    # it and read the number as a recommended intervention level. Same
-    # classify_maximum_interpretation() call, same computed value - only
-    # the two lines are merged into one explicit caveat block instead of
-    # printed as separate, easy-to-decouple facts.
     if interpretation == "Numerical maximum only":
         if d["maximum_ci_includes_zero"] is False:
-            # Band excludes zero: the NEGI value itself IS statistically
-            # supported as positive under the current spatial-refit
-            # uncertainty band. What's NOT supported is reading this point
-            # as a robust/optimal intervention - it's non-robust because
-            # it's near the trajectory boundary and/or locally unstable.
-            # Saying "not statistically supported" here would misdescribe
-            # an all-positive band as indistinguishable from zero.
             band = (
                 f" [{d['maximum_uncertainty_low']:.3f}, {d['maximum_uncertainty_high']:.3f}]"
                 if d["maximum_uncertainty_low"] is not None else ""
@@ -7884,11 +6363,6 @@ def format_maximum_headline(
                 "not interpret it as an optimal intervention."
             )
         else:
-            # Band includes zero (or is unavailable): here "not
-            # statistically supported" is the accurate description - the
-            # value itself is not distinguishable from zero under the
-            # current uncertainty band, on top of not being a robust
-            # optimum.
             lines.append(
                 "    -> Not statistically distinguishable from zero. Do "
                 "not interpret as an optimal intervention."
@@ -7898,7 +6372,6 @@ def format_maximum_headline(
     return lines
 
 
-# PERMUTATION FEATURE IMPORTANCE
 def compute_feature_importance(
     model_results: ModelResults, cfg: Config, summary: SummaryLog
 ) -> FeatureImportanceResult:
@@ -7927,13 +6400,6 @@ def compute_feature_importance(
         vals     = np.array(runs[feat])
         feat_mean = vals.mean()
         feat_std  = vals.std(ddof=1)
-        # Use the t-distribution critical value (df = n-1), not a fixed
-        # z = 1.96, for the CI half-width: 1.96 is the large-sample normal
-        # approximation, and with only cfg.n_permutation_outer_seeds (=10)
-        # seed-level means it understates the interval - t(df=9) ≈ 2.262
-        # vs z ≈ 1.96, about 15% wider. This is the standard correction for
-        # a mean's CI at small n; it doesn't change what's being estimated,
-        # only how honestly the interval reflects n=10.
         t_crit    = float(scipy_stats.t.ppf(0.975, df=len(vals) - 1)) if len(vals) > 1 else float("nan")
         feat_ci95 = t_crit * feat_std / np.sqrt(len(vals))
         rows.append({
@@ -7970,7 +6436,6 @@ def compute_feature_importance(
     return FeatureImportanceResult(table=table)
 
 
-# SCENARIO FRAMEWORK
 def predict_lst(
     model,
     ndvi: float, ndbi: float, elevation: float,
@@ -8195,26 +6660,14 @@ def build_scenario2_empirical_trajectory(
             df, float(pct)
         )
         if n < cfg.s2_search_min_bin_count:
-            # Fall back to the nearest adequately-sampled neighbour already
-            # computed rather than accepting a noisy small-n statistic.
             ndvi_val, ndbi_val = bin_ndvi[-1], bin_ndbi[-1]
         bin_ndvi.append(ndvi_val)
         bin_ndbi.append(ndbi_val)
     bin_ndvi, bin_ndbi = np.array(bin_ndvi), np.array(bin_ndbi)
 
-    # Baseline-anchor fix: force the trajectory's own starting point (bin
-    # fraction 0.0) to be the real baseline, not the cumulative-subset
-    # archetype pixel nearest to it. See docstring above.
     bin_ndvi[0] = baseline_ndvi
     bin_ndbi[0] = baseline_ndbi
 
-    # Resample the empirical bin path onto the shared scenario-fraction
-    # axis (same axis, same length, same interpolation-free downstream
-    # handling as Scenario 1) via monotone linear interpolation over the
-    # bin sequence's own fraction index - not over (NDVI, NDBI) values
-    # directly, so the resampled path still only ever visits points
-    # along the real empirical sequence (plus the now-anchored baseline
-    # point at fraction 0.0).
     bin_fraction = np.linspace(0.0, 1.0, cfg.s2_trajectory_n_bins)
     ndvi_traj = np.interp(scenarios, bin_fraction, bin_ndvi)
     ndbi_traj = np.interp(scenarios, bin_fraction, bin_ndbi)
@@ -8306,25 +6759,11 @@ def run_scenario_trajectories(
     is otherwise untouched.
     """
     model, data = model_results.model, model_results.data
-    # Item 10 fix (holdout independence): every quantity below that DEFINES
-    # the scenario analysis - baseline NDVI/NDBI/elevation, the NDVI target
-    # quantile, the NDVI-NDBI correlation used for the trajectory, the
-    # Scenario 2 archetype endpoint, and the Scenario 2 empirical
-    # trajectory - must come from the training partition only. Using the
-    # full `data.df` here would let the confirmatory holdout influence the
-    # very counterfactual it is later used to help evaluate. `data.df`
-    # (full dataset) remains correct for diagnostics that are not part of
-    # scenario definition - it is not touched anywhere else in this
-    # function.
     df = data.df_train
 
     scenarios = np.arange(0.0, 1.0001, cfg.scenario_step)
     assert np.all(np.diff(scenarios) > 0), "Scenario axis must be strictly increasing."
 
-    # Fixed (non-intervention) predictors: Elevation, ST_EMIS, ST_EMSD are
-    # held at their training-partition medians at every scenario point.
-    # ST_EMIS / ST_EMSD are model predictors, NOT scenario variables - the
-    # scenarios below only ever move NDVI and NDBI.
     fixed_values     = fixed_reference_values(df)
     fixed_elevation  = fixed_values["Elevation"]
     fixed_st_emis    = fixed_values["ST_EMIS"]
@@ -8349,21 +6788,9 @@ def run_scenario_trajectories(
             "The baseline feature vector is outside observed feature bounds."
         )
 
-    # Observed training-domain limits (item: "never allow NDVI or NDBI to
-    # exceed the observed training-domain limits"). Scenario 1 does not
-    # need these (its NDVI target is already an observed quantile <= max,
-    # and its NDBI is held fixed at the observed baseline).
     ndvi_min_observed, ndvi_max_observed = df["NDVI"].min(), df["NDVI"].max()
     ndbi_min_observed, ndbi_max_observed = df["NDBI"].min(), df["NDBI"].max()
 
-    # Scenario 2 intervention endpoint (REVISED v2): fixed a priori from an
-    # observed urban archetype, WITHOUT any reference to the model (see
-    # select_scenario2_archetype_endpoint() and the module docstring
-    # above). This preserves Scenario -> Model -> NEGI causal separation:
-    # the endpoint is a data/urban-form decision, not something searched
-    # for by asking the model where it predicts cooling. The model is
-    # first consulted below, in the evaluation loop, exactly as it would
-    # be for any other externally-specified scenario.
     baseline_ndbi_percentile = float((df["NDBI"] <= baseline_ndbi).mean())
     s2_endpoint = select_scenario2_archetype_endpoint(df, cfg, summary)
     s2_ndvi_endpoint = s2_endpoint["ndvi_endpoint"]
@@ -8385,14 +6812,6 @@ def run_scenario_trajectories(
         """Scenario 1 NDVI values along the trajectory (UNCHANGED)."""
         return baseline_ndvi + fraction * (ndvi_target - baseline_ndvi)
 
-    # Scenario 2's full (NDVI, NDBI) path, baseline -> archetype endpoint,
-    # built from real observed bin medians and resampled onto the shared
-    # scenario-fraction axis (see build_scenario2_empirical_trajectory()
-    # docstring). Like the endpoint itself, this path is built purely from
-    # observed data statistics - the model is not consulted in its
-    # construction either. This is NOT a linear blend of two endpoint
-    # values - each point along the path is itself a real, in-support
-    # observed statistic.
     ndvi_traj_s2, ndbi_traj_s2 = build_scenario2_empirical_trajectory(
         df, baseline_ndbi_percentile, s2_endpoint["endpoint_percentile"],
         scenarios, cfg, baseline_ndvi, baseline_ndbi,
@@ -8424,12 +6843,6 @@ def run_scenario_trajectories(
         lst_s2.append(v2)
         ood_s2.append(o2)
 
-    # Guard for the baseline-anchor fix in build_scenario2_empirical_trajectory:
-    # Scenario 2's first evaluated point must now coincide with the actual
-    # baseline (same NDVI/NDBI as used for baseline_lst and Scenario 1's
-    # start), so its predicted cooling at scenario=0% must be ~0, exactly
-    # like Scenario 1. This is a regression guard, not a new scientific
-    # claim - it only checks that the fix above is actually in effect.
     assert np.isclose(ndvi_s2_vals[0], baseline_ndvi, atol=1e-9), (
         "Scenario 2's 0% NDVI does not match the baseline NDVI - the "
         "baseline-anchor fix in build_scenario2_empirical_trajectory is "
@@ -8447,12 +6860,6 @@ def run_scenario_trajectories(
         "wrong reference point."
     )
 
-    # POST-HOC descriptive diagnostic only (does not affect the trajectory
-    # in any way - it is computed strictly after the model has already
-    # evaluated the independently-defined archetype trajectory above).
-    # Reports whether this archetype happens to fall in a region the model
-    # predicts meaningful cooling in, using cfg.s2_meaningful_cooling_threshold_c
-    # purely as a descriptive label for the summary log/figure captions.
     s2_endpoint_cooling_c = float(baseline_lst - lst_s2[-1])
     s2_endpoint_meaningful = s2_endpoint_cooling_c >= cfg.s2_meaningful_cooling_threshold_c
     summary.log(
@@ -8568,21 +6975,10 @@ def run_scenario2_percentile_sensitivity(
     """
     data  = model_results.data
     model = model_results.model
-    # Item 10 fix: same rule as run_scenario_trajectories() - this rebuilds
-    # the Scenario 2 endpoint/trajectory at alternative percentiles, so it
-    # must use the training-only frame, never the confirmatory holdout.
     df    = data.df_train
     scenarios = s1.scenario_fraction
     baseline_ndbi_percentile = float((df["NDBI"] <= baseline.baseline_ndbi).mean())
 
-    # Same standardized kNN reference used by compute_support_diagnostics
-    # (same scaler, same k, same training-only reference population - see
-    # the Item 10 fix there) - refit here only because SupportDiagnostics
-    # does not itself retain the fitted NearestNeighbors object. The
-    # reference population, standardization, and thresholds
-    # (support.support_threshold_k / support.sparsity_threshold_k) are the
-    # SAME ones already computed once for the primary run and are only
-    # ever read here, never recomputed.
     nn_model_k = NearestNeighbors(n_neighbors=cfg.support_knn_k).fit(
         support.scaler.transform(data.X_train)
     )
@@ -8633,15 +7029,6 @@ def run_scenario2_percentile_sensitivity(
         mean_knn_p   = _mean_knn_distance(s2_p, support.scaler, nn_model_k, cfg)
         in_support_p = mean_knn_p <= support.support_threshold_k
 
-        # This loop calls compute_uncertainty_bands once
-        # per percentile (potentially a dozen+ times), and the full
-        # per-checkpoint "Adaptive convergence summary" is only useful for
-        # the one primary Scenario 2 trajectory - repeating it here just
-        # produces console spam. log_convergence_detail=False suppresses
-        # that per-call text WITHOUT changing anything about the adaptive
-        # loop itself; converged_early/n_refits_used/endpoint CI width are
-        # still returned on `unc_p` and collected below into one condensed
-        # summary printed after the loop finishes.
         unc_p = compute_uncertainty_bands(
             model_results, baseline, s1, s2_p, negi_p, cfg,
             log_convergence_detail=False,
@@ -8668,11 +7055,6 @@ def run_scenario2_percentile_sensitivity(
             "endpoint_lst":      float(s2_p.lst[-1]),
             "endpoint_deltaT":   endpoint_deltat,
             "endpoint_negi":     float(endpoint_p["endpoint_evaluated_negi"]),
-            # Decision-envelope inputs (additive columns): where along
-            # THIS archetype's trajectory the reference-cost NEGI is
-            # maximal, read from the unmodified compute_negi_results()
-            # output computed above. Reporting only - nothing here feeds
-            # back into any trajectory, NEGI value, or endpoint.
             "maximum_scenario_pct": float(negi_p.scenario_pct[negi_p.s2_optimum_idx]),
             "maximum_negi":         float(negi_p.negi_s2[negi_p.s2_optimum_idx]),
             "endpoint_ci_lower": endpoint_p["endpoint_uncertainty_low"],
@@ -8686,11 +7068,6 @@ def run_scenario2_percentile_sensitivity(
 
     table = pd.DataFrame(rows)
 
-    # One concise, condensed line covering the whole sweep
-    # instead of one detailed "Adaptive convergence summary" per
-    # percentile. Purely a reporting aggregate over the `converged_early` /
-    # `n_refits_used` / `endpoint_ci_width` values already collected above
-    # for each percentile - introduces no new computation.
     if len(table):
         n_total      = len(table)
         n_failed     = int((~table["converged_early"]).sum())
@@ -8725,13 +7102,6 @@ def report_scenario2_percentile_sensitivity(
         f"exported to {path}."
     )
 
-    # Surface configured vs. actual refit budget explicitly (rather than
-    # only being inferable from wall-clock time): this sweep is supposed
-    # to use `n_spatial_refits_percentile_sensitivity`, a deliberately
-    # smaller ceiling than the primary run's `n_spatial_refits`, via
-    # compute_uncertainty_bands(max_refits=...). If that override were
-    # ever silently unwired again, `actual` would drift back up toward
-    # the primary ceiling and this line would catch it immediately.
     if len(table):
         actual_min = int(table["n_refits_used"].min())
         actual_max = int(table["n_refits_used"].max())
@@ -8770,11 +7140,6 @@ def report_scenario2_percentile_sensitivity(
         f"{n_robust}/{len(table)}",
     )
 
-    # Integrity-pass addition (item 4): summary statistics across the now-
-    # widened percentile sweep, so a reader does not have to eyeball the
-    # per-row table to see whether the qualitative conclusion is stable.
-    # Reads only from the already-computed `table`; introduces no new NEGI,
-    # uncertainty, or robustness formula.
     stats = compute_scenario2_percentile_summary_stats(table)
     stats_path = save_csv(
         pd.DataFrame([stats]), cfg.data_dir / "scenario2_percentile_summary.csv",
@@ -8827,11 +7192,6 @@ def compute_scenario2_percentile_summary_stats(table: pd.DataFrame) -> dict:
         "fraction_positive_negi":    float((table["endpoint_negi"] > 0).mean()),
         "min_endpoint_negi":         float(table["endpoint_negi"].min()),
         "max_endpoint_negi":         float(table["endpoint_negi"].max()),
-        # Actual per-percentile refit count, not just the configured
-        # ceiling - lets a stale/unwired refit-budget override (see
-        # Config.n_spatial_refits_percentile_sensitivity) show up directly
-        # in the exported summary instead of only being inferable from
-        # wall-clock time.
         "min_refits_used":           int(table["n_refits_used"].min()),
         "max_refits_used":           int(table["n_refits_used"].max()),
     }
@@ -9019,7 +7379,6 @@ def compute_display_smoothing(
     }
 
 
-# NEGI COMPUTATION
 def _energy_cost(
     scenario_fraction: np.ndarray, w0: float, exponent: float, cfg: Config
 ) -> np.ndarray:
@@ -9067,11 +7426,6 @@ def compute_negi_results(
         if len(cooling_points) > 0 else float("nan")
     )
 
-    # REFERENCE_COOLING_C: reference cooling magnitude used in the
-    # generalized/sensitivity formulation (see run_sensitivity_analysis).
-    # It is NOT used to normalize the primary NEGI cooling-benefit term
-    # below - see REFERENCE_BENEFIT_SCALE for that role. The two quantities are
-    # deliberately distinct and must not be substituted for one another.
     reference_cooling_c = cfg.reference_cooling_scale_factor * max(
         np.abs(delta_t_s1).max(), np.abs(delta_t_s2).max()
     )
@@ -9089,29 +7443,6 @@ def compute_negi_results(
 
     cooling_benefit_s1 = np.maximum(delta_t_s1, 0.0)
     cooling_benefit_s2 = np.maximum(delta_t_s2, 0.0)
-    # REFERENCE_BENEFIT_SCALE (item 9): maximum positive predicted cooling
-    # across the evaluated scenarios of THIS (the primary, full-training)
-    # fit, used to normalize the within-study cooling-benefit component of
-    # the primary NEGI formulation directly below. This is distinct from
-    # REFERENCE_COOLING_C above, which serves the generalized/sensitivity
-    # formulation instead.
-    #
-    # DEFINITION ENFORCED: NEGI is defined here so that every spatial
-    # refit's cooling benefit is normalized against this ONE fixed
-    # reference scale (see compute_uncertainty_bands(), which passes this
-    # same value into every refit rather than recomputing it from each
-    # refit's own cooling arrays). This keeps every refit's NEGI expressed
-    # in identical units, so the reported uncertainty band is read as
-    # "how much does predicted cooling vary, on a fixed NEGI scale" - not
-    # as "how much does a per-refit-renormalized quantity vary" (the
-    # latter would be a materially different estimand: a per-refit
-    # normalization lets weak- and strong-cooling refits both approach
-    # normalized benefit ~1 at their own maxima, discarding between-refit
-    # magnitude information that this fixed-scale definition preserves).
-    # If NEGI is ever intentionally redefined to normalize each refit by
-    # its own maximum cooling instead, this must be recomputed inside
-    # every refit's closure in compute_uncertainty_bands() - do not assume
-    # that change is required by anything in the current implementation.
     reference_benefit_scale = max(cooling_benefit_s1.max(), cooling_benefit_s2.max(), EPS)
 
     benefit_s1_norm = safe_divide(cooling_benefit_s1, reference_benefit_scale)
@@ -9173,8 +7504,6 @@ def report_negi_scenario_diagnostics(
     log_info(f"  First cooling point   : {first_str}")
     log_info("  NEGI cooling transform: max(\u0394T, 0)")
 
-    # Manuscript-style interpretive note retained in the exported summary
-    # log only (item 9); no calculation changed, console text shortened.
     summary.log(
         "Scenario diagnostics", "Interpretive note (unclipped thermal response)",
         f"The coordinated vegetation-built-up (Scenario 2) trajectory exhibits a "
@@ -9214,7 +7543,6 @@ def report_negi_scenario_diagnostics(
     vlog_info(cfg, "  Use: primary within-study NEGI cooling normalization, "
                    "held fixed across every spatial refit (see item 9)")
 
-    # Full derivation details retained in the exported summary log (item 9).
     summary.log(
         "Scenario diagnostics", "REFERENCE_COOLING_C derivation",
         f"{reference_cooling_c:.4f} \u00b0C "
@@ -9236,10 +7564,6 @@ def report_negi_scenario_diagnostics(
         "REFERENCE_COOLING_C and REFERENCE_BENEFIT_SCALE are not interchangeable.",
     )
 
-    # Task 4/5: reporting-terminology and non-causal-interpretation
-    # safeguards. Neither changes any Scenario 1/2 calculation, the NEGI
-    # equation, or the energy-cost equation - these are text-only
-    # additions to the exported summary log and console output.
     log_info(f"\n{interpretation_text('scenario1_terminology')}")
     log_info(f"\n{interpretation_text('non_causal_safeguard')}")
     summary.log("Scenario diagnostics", "Scenario 1 terminology / interpretation",
@@ -9275,10 +7599,6 @@ def check_interior_optimum(
             f"  {label}: maximum observed at scenario = "
             f"{scenarios[idx] * 100:.1f}%; may be sensitive to tree partitions."
         )
-    # Concise console reporting of this result now happens in the combined
-    # "Boundary / robustness assessment" block (report_negi_zero_crossing_
-    # diagnostics), once spatial-refit uncertainty is available. The full
-    # sentence is kept at DEBUG level for the developer log only.
     log_debug(msg)
     if cfg.debug:
         log_debug(
@@ -9393,31 +7713,6 @@ def report_boundary_maximum_assessment(negi: "NEGIResults", cfg: Config = CFG) -
             log_info(f"    {'Local sign change':<22} : YES")
 
 
-# SUPPORT / EXTRAPOLATION DIAGNOSTICS
-#
-# This module reports three distinct nearest-neighbour-based diagnostics
-# that use similar language but answer different questions and must not be
-# read as contradictory versions of the same number (item 5):
-#
-#   1. Trajectory-level 1-NN diagnostic (_compute_nn1_distances): for each
-#      scenario trajectory point, the distance to its single nearest
-#      observed training point (1-NN), flagged against the 95th percentile
-#      of that SAME trajectory's own 1-NN distances. Reporting-only - it
-#      does not feed the formal support classification below.
-#   2. Empirical feature-support diagnostic (_mean_knn_distance /
-#      _compute_extrapolation_report / compute_support_diagnostics): the
-#      mean distance to each trajectory point's k=support_knn_k nearest
-#      observed points, compared against a threshold taken from the
-#      observed/model-reference population's OWN k-NN distance
-#      distribution (its support_percentile-th percentile). This IS the
-#      formal PASS/FAIL feature-space support classification
-#      (in_support_s1/s2, extrap_s1_ok/s2_ok).
-#   3. Empirical local-sparsity diagnostic (sparsity_threshold_k / Config.
-#      FEATURE_SPARSITY_PERCENTILE): the same reference population and k as
-#      (2), reported separately so its percentile can be changed
-#      independently without altering the formal support threshold. It
-#      flags locally sparse regions for reporting only and never overrides
-#      a formal PASS from (2).
 def _compute_nn1_distances(
     traj: ScenarioTrajectory,
     scaler: StandardScaler,
@@ -9480,8 +7775,6 @@ def _compute_extrapolation_report(
     sparsity_percentile: Optional[float] = None,
 ) -> bool:
     frame             = traj.feature_frame()
-    # Marginal [min, max] bounds are checked for EVERY model feature (the
-    # two emissivity covariates included), not just NDVI/NDBI/Elevation.
     bounds_ok = {
         feat: bool(frame[feat].between(data.feature_min[feat],
                                         data.feature_max[feat]).all())
@@ -9494,10 +7787,6 @@ def _compute_extrapolation_report(
     fully_supported   = (all(bounds_ok.values()) and nn_ok
                          and not traj.out_of_bounds.any())
 
-    # Empirical local-sparsity reporting (Section 1 correction). This never
-    # feeds back into `fully_supported` / formal kNN support above - it is
-    # a separate, reporting-only diagnostic computed from the empirical
-    # observed/model-reference reference threshold, not the trajectory.
     max_nn      = float(mean_knn_dist.max())
     median_nn   = float(np.median(mean_knn_dist))
     n_sparse    = 0
@@ -9586,26 +7875,12 @@ def compute_support_diagnostics(
 
     nn_model_k   = NearestNeighbors(n_neighbors=cfg.support_knn_k).fit(feat_mx)
     obs_dist_k, obs_idx_k = nn_model_k.kneighbors(feat_mx, n_neighbors=cfg.support_knn_k + 1)
-    # Self-neighbour QA (item 6): the empirical reference distribution is
-    # built by querying the observed/model-reference points against
-    # themselves, so that no point uses itself as one of its own k nearest
-    # neighbours. We CANNOT assume self always lands in column 0: when two
-    # or more rows are exact (or tied-after-scaling) duplicates in feature
-    # space, sklearn's NearestNeighbors does not guarantee tie order, so a
-    # duplicate row - not the point itself - can be returned first. Blindly
-    # dropping column 0 in that case would strip a real neighbour and leave
-    # a spurious distance-0 self-neighbour in the reference distribution.
-    # Instead, explicitly locate each row's own index wherever it appears
-    # among its returned neighbours and drop exactly that entry.
     n_obs = len(feat_mx)
     self_mask = obs_idx_k == np.arange(n_obs)[:, None]
     self_hits_per_row = self_mask.sum(axis=1)
     empirical_knn_self_excluded = bool(np.all(self_hits_per_row == 1))
 
     if not empirical_knn_self_excluded:
-        # Diagnose why: rows with 0 self-hits mean self fell outside the
-        # k+1 window (extreme duplicate clustering); rows with >1 self-hits
-        # cannot happen (indices are unique per row) but are guarded anyway.
         n_missing_self = int(np.sum(self_hits_per_row == 0))
         n_multi_self    = int(np.sum(self_hits_per_row > 1))
         vlog_info(
@@ -9624,38 +7899,21 @@ def compute_support_diagnostics(
     for i in range(n_obs):
         row_self_mask = self_mask[i]
         if row_self_mask.any():
-            # Drop exactly the (first) self-occurrence, keep the rest.
             keep = np.ones(obs_dist_k.shape[1], dtype=bool)
             keep[np.argmax(row_self_mask)] = False
             obs_dist_k_clean[i] = obs_dist_k[i, keep][:cfg.support_knn_k]
         else:
-            # Self never returned (pathological duplicate clustering) -
-            # keep the k nearest returned distances as-is.
             obs_dist_k_clean[i] = obs_dist_k[i, :cfg.support_knn_k]
     obs_dist_k    = obs_dist_k_clean
     obs_mean_knn_dist   = obs_dist_k.mean(axis=1)
     support_threshold_k = np.percentile(obs_mean_knn_dist, cfg.support_percentile)
 
-    # Empirical local-sparsity reference threshold (Section 1 correction):
-    # computed ONCE from the observed/model-reference kNN-distance
-    # distribution in the same standardized predictor space and same k used
-    # for scenario support assessment above - never from the scenario
-    # trajectory itself, and never the scenario median.
     sparsity_percentile  = cfg.FEATURE_SPARSITY_PERCENTILE
     sparsity_threshold_k = float(np.percentile(obs_mean_knn_dist, sparsity_percentile))
 
-    # Lower boundary for the three-level local-density diagnostic (HIGH /
-    # MODERATE / LOW) - see classify_local_density(). Kept as a distinct
-    # percentile of the same reference distribution so HIGH/MODERATE/LOW
-    # are genuinely nested bands, not derived from the trajectory itself.
     density_moderate_percentile  = cfg.DENSITY_MODERATE_PERCENTILE
     density_moderate_threshold_k = float(np.percentile(obs_mean_knn_dist, density_moderate_percentile))
     if not (density_moderate_threshold_k < sparsity_threshold_k):
-        # Guard against a misconfigured Config where the two percentiles
-        # would collapse the HIGH/MODERATE boundary onto (or above) the
-        # MODERATE/LOW boundary - report loudly rather than silently
-        # producing a vacuous density band, the same failure mode this fix
-        # was written to eliminate.
         vlog_info(
             cfg,
             "[Support] WARNING: DENSITY_MODERATE_PERCENTILE "
@@ -9740,11 +7998,6 @@ def compute_joint_multivariate_support(
     reference = support.reference_mean_knn_dist
 
     def _percentiles_of(distances: np.ndarray) -> np.ndarray:
-        # Empirical CDF percentile of each scenario distance within the
-        # training reference distribution (same statistic, same
-        # standardized joint space) - larger distance -> higher percentile
-        # -> sparser joint support. np.searchsorted on the sorted
-        # reference gives the exact empirical-CDF rank in O(log n).
         sorted_ref = np.sort(reference)
         ranks = np.searchsorted(sorted_ref, distances, side="right")
         return 100.0 * ranks / len(sorted_ref)
@@ -9818,10 +8071,6 @@ def compute_joint_multivariate_support(
         "and location of any sparse points above.",
     )
 
-    # Always-visible console summary (previously only reachable via
-    # cfg.verbose=True, above): the joint-support PASS/PARTIAL/FAIL
-    # conclusion for both scenarios must reach the publication console,
-    # not just the detailed per-scenario breakdown.
     log_headline(
         "Joint multivariate support: "
         f"Scenario 1 = {results['Scenario 1']['joint_support_status']}, "
@@ -9892,8 +8141,6 @@ def report_data_support_check(
         first_out_idx = np.argmax(~in_support)
         log_info(f"  Dense region exit at : scenario = {s2.scenario_pct[first_out_idx]:.1f}%")
 
-    # kNN support specifically at the numerical maximum, not just the
-    # trajectory-wide pass/fail (item 1).
     max_idx = negi.s2_optimum_idx
     log_info(
         f"  Support at maximum   : bounds="
@@ -9939,7 +8186,6 @@ def report_data_support_check(
     )
 
 
-# UNCERTAINTY BANDS (SPATIAL REFITS)
 def compute_uncertainty_bands(
     model_results: ModelResults,
     baseline: ScenarioBaseline,
@@ -10019,22 +8265,8 @@ def compute_uncertainty_bands(
 
     all_groups = data.groups.to_numpy()
 
-    # Item 7: model_seed is held fixed (cfg.random_seed) across every refit
-    # below - only the training partition changes. This means the
-    # uncertainty band reflects SPATIAL-PARTITION UNCERTAINTY ONLY, not
-    # partition + model-stochasticity. That is an intentional, disclosed
-    # choice (not a bug): mixing the two would conflate "how much does the
-    # model change across independent spatial samples" with "how much does
-    # XGBoost's internal randomness alone contribute", and the two should
-    # not be reported as if they were the same quantity.
     model_stochasticity_varied = False
 
-    # Build batch feature frames once outside the fold loop - avoids
-    # per-point model.predict() calls (saves ~8,000 individual calls for
-    # 10 refits × 401 scenario points × 2 scenarios).
-    # Five-feature frames: NDVI/NDBI follow the trajectory; Elevation,
-    # ST_EMIS, ST_EMSD stay at the fixed reference values every refit
-    # shares (they are predictors, not intervention variables).
     _fixed_ref = baseline.fixed_feature_values()
     feat_s1 = build_feature_frame(s1.ndvi, s1.ndbi, _fixed_ref)
     feat_s2 = build_feature_frame(s2.ndvi, s2.ndbi, _fixed_ref)
@@ -10051,17 +8283,6 @@ def compute_uncertainty_bands(
         fixed_reference_values(df_full),
     )
 
-    # Item 5 (dev-speed audit): each refit below is fully independent (own
-    # training slice, same fixed hyperparameters/seed) and produces the
-    # same numeric output regardless of execution order, so each BATCH is
-    # parallelized internally. The inner XGBRegressor stays n_jobs=1 -
-    # parallelism happens at the refit level only, one consistent level of
-    # parallelism, so this does not oversubscribe CPU cores the way
-    # nesting two n_jobs=-1 calls would (see the RandomForestRegressor fix
-    # in compare_models()).
-    # Captured as a plain local so the closure below doesn't drag the
-    # whole `model_results` object (fitted search + full dataset) into
-    # every parallel task's payload.
     best_params = model_results.best_params
 
     def _fit_one_spatial_refit(train_idx_fold):
@@ -10075,30 +8296,6 @@ def compute_uncertainty_bands(
         )
         mf.fit(Xf, yf)
 
-        # Correctness fix: this baseline prediction must come from THIS
-        # refit's own model (`mf`), which is a different fitted model on
-        # every call into this function. predict_lst()'s default cache
-        # (module-global PREDICTION_CACHE) is keyed only on
-        # (NDVI, NDBI, Elevation, ST_EMIS, ST_EMSD) - it has no notion of
-        # which model produced a cached value. Because
-        # `baseline.baseline_ndvi`, `baseline.baseline_ndbi`, and the fixed
-        # Elevation/ST_EMIS/ST_EMSD reference values are the
-        # SAME feature vector on every single spatial refit (and across every
-        # percentile-sensitivity call into this function too), routing
-        # this call through that cache meant every refit after the first
-        # silently reused whichever model happened to populate the cache
-        # first (the originally fitted model from run_scenario_trajectories)
-        # instead of `mf`'s own baseline prediction. That mixed two
-        # different models' outputs inside cooling_s1_f/cooling_s2_f below
-        # (baseline from one model, scenario predictions from another) on
-        # nearly every refit, silently removing one real source of
-        # between-refit variance from the reported NEGI uncertainty bands.
-        # Computed directly here, uncached, exactly like lst_s1_f/lst_s2_f
-        # immediately below - one extra single-row prediction per refit is
-        # computationally negligible next to fitting XGBoost itself.
-        # predict_lst()'s cache remains unchanged and correct for every
-        # other call site in this module, all of which evaluate a single,
-        # unchanging fitted model.
         baseline_df_f = build_feature_frame(
             [baseline.baseline_ndvi], [baseline.baseline_ndbi], _fixed_ref,
         )
@@ -10108,21 +8305,6 @@ def compute_uncertainty_bands(
 
         cooling_s1_f = baseline_lst_f - lst_s1_f
         cooling_s2_f = baseline_lst_f - lst_s2_f
-        # Item 9: intentionally normalizes by the ONE fixed
-        # negi.reference_benefit_scale (from the primary fit), not a
-        # denominator recomputed from this refit's own cooling arrays -
-        # see reference_benefit_scale's definition in compute_negi_results().
-        # This keeps every refit's NEGI on the same scale as the primary
-        # result, so the resulting uncertainty band answers "how much does
-        # predicted cooling vary, on a fixed NEGI scale" rather than
-        # conflating that with normalization-induced variance. Do not
-        # replace this with a per-refit max(cooling_s1_f.max(),
-        # cooling_s2_f.max()) denominator without first re-deriving the
-        # intended NEGI estimand - doing so silently changes what
-        # quantity is being estimated (see NEGIResults.reference_benefit_scale
-        # docstring), and does not, by itself, necessarily widen the CI
-        # (numerator/denominator covariance makes the direction of any
-        # such change indeterminate).
         benefit_s1_f = safe_divide(np.maximum(cooling_s1_f, 0.0), negi.reference_benefit_scale)
         benefit_s2_f = safe_divide(np.maximum(cooling_s2_f, 0.0), negi.reference_benefit_scale)
         negi_s1_f    = (cfg.alpha_weight * benefit_s1_f
@@ -10176,10 +8358,6 @@ def compute_uncertainty_bands(
         median = float(np.percentile(vals, 50.0))
         return {
             f"{prefix}_mean_negi":   float(vals.mean()),
-            # Review-pass addition (recommendation 2): tracked alongside
-            # mean/lower/upper/width from here on so the convergence
-            # criterion below can judge median stability directly, instead
-            # of inferring it indirectly from CI width alone.
             f"{prefix}_median_negi": median,
             f"{prefix}_ci_lower":    lower,
             f"{prefix}_ci_upper":    upper,
@@ -10189,20 +8367,6 @@ def compute_uncertainty_bands(
     def _endpoint_ci_stats(negi_s2_folds_arr: np.ndarray) -> dict:
         return _ci_stats_at(negi_s2_folds_arr, -1, "endpoint")
 
-    # Reviewer fix: the Scenario 2 MAXIMUM (negi.s2_optimum_idx, e.g. the
-    # 2% point) is a different location on the trajectory from the
-    # ENDPOINT (index -1, e.g. 100%). Previously only the endpoint's
-    # per-checkpoint CI stats were tracked here, and the resulting
-    # "publication convergence" verdict - computed purely from how the
-    # ENDPOINT's band evolved with refit count - was then reused as the
-    # convergence caveat attached to the MAXIMUM's reported band too. That
-    # conflates two distinct points' convergence behaviour: the maximum's
-    # own band can still be moving even after the endpoint's has settled,
-    # or vice versa. This second helper reads the SAME already-accumulated
-    # per-refit trajectory array at `negi.s2_optimum_idx` instead of -1 -
-    # zero additional model fits - so a maximum-specific checkpoint history
-    # (and therefore a maximum-specific convergence verdict) can be reported
-    # separately from the endpoint's.
     def _maximum_ci_stats(negi_s2_folds_arr: np.ndarray) -> dict:
         return _ci_stats_at(negi_s2_folds_arr, negi.s2_optimum_idx, "maximum")
 
@@ -10217,58 +8381,10 @@ def compute_uncertainty_bands(
     required_stable = max(1, int(cfg.uncertainty_convergence_required_stable_checkpoints))
     tol = float(cfg.adaptive_convergence_tolerance)
 
-    # --- CRUX FIX ---------------------------------------------------
-    # Before this fix, this loop only checked the last `required_stable`
-    # checkpoints against the LOOSER `adaptive_convergence_tolerance`
-    # (2%) and stopped as soon as that short local window looked flat.
-    # A separate, stricter, full-refit-history check against
-    # `uncertainty_convergence_tolerance` (5%) already existed
-    # (compute_uncertainty_convergence_diagnostic) but was explicitly
-    # documented as "reporting threshold only; does not affect any
-    # exported uncertainty value" - i.e. it could (and, on this
-    # dataset, did) come back "NOT YET STABILIZED" for the EXACT
-    # uncertainty band already locked in and published in the headline
-    # NEGI figures, with no effect beyond a caveat printed after the
-    # fact. A short local window can look stable purely by chance even
-    # while the estimate has not actually settled over its history
-    # (e.g. an early large jump followed by a few quiet checkpoints) -
-    # exactly the CRITERIA DISAGREE case this pipeline was already
-    # detecting but not acting on.
-    #
-    # Fix: early stopping now ALSO requires an extended lookback window
-    # (twice the required-stable count) to be free of any single
-    # checkpoint-to-checkpoint change exceeding
-    # `uncertainty_convergence_tolerance`. If that broader, stricter
-    # condition is not met, refitting continues (up to
-    # `cfg.n_spatial_refits`) instead of stopping - the pipeline now
-    # acts on its own "additional spatial refits would likely further
-    # stabilize the endpoint CI width" advice rather than only printing
-    # it. This can only cause the loop to keep refitting longer than
-    # before, never to stop earlier.
-    # Note (recommendation 3): `lookback` below is, and always was, a fixed
-    # window size (2x required_stable checkpoints), not "every checkpoint
-    # since the start of the run" - that full-history dependence lived only
-    # in compute_uncertainty_convergence_diagnostic's after-the-fact
-    # verdict (see uncertainty_convergence_lookback_checkpoints, fixed
-    # there in this same pass). Naming it "full_history_tol" was therefore
-    # misleading; kept as `full_history_tol` for backward-compatible
-    # variable naming below but it has only ever gated a bounded lookback.
     lookback = max(required_stable, 2 * required_stable)
     full_history_tol = float(cfg.uncertainty_convergence_tolerance)
 
-    # Review-pass fix (recommendation 2): judge convergence from the
-    # endpoint's median, lower-CI, and upper-CI individually rather than
-    # from CI width alone. Width can stay constant while both endpoints
-    # drift together, or fluctuate slightly while the interval itself has
-    # already settled - the endpoints (and the median between them) are
-    # the quantities a reader actually cares about, so they are what
-    # gates stopping now. `endpoint_ci_width` is still recorded on every
-    # checkpoint (below) purely for backward-compatible reporting/plots.
     _CONVERGENCE_QUANTITIES = ("endpoint_median_negi", "endpoint_ci_lower", "endpoint_ci_upper")
-    # Reviewer fix: mirrors _CONVERGENCE_QUANTITIES but for the Scenario 2
-    # MAXIMUM's own quantities, so its convergence can be judged on its own
-    # band's median/lower-CI/upper-CI rather than borrowing the endpoint's
-    # verdict.
     _CONVERGENCE_QUANTITIES_MAXIMUM = ("maximum_median_negi", "maximum_ci_lower", "maximum_ci_upper")
 
     def _rel_range_stable(values: list, tolerance: float) -> bool:
@@ -10297,13 +8413,6 @@ def compute_uncertainty_bands(
             return rng < (tolerance * floor)
         return (max(values) - min(values)) / abs(mean_v) < tolerance
 
-    # True incremental sequential schedule: start at `min_refits`, then
-    # advance by `check_interval` refits at a time, recomputing the
-    # endpoint CI width after every step and checking the stopping
-    # criterion immediately - rather than restarting independent runs at a
-    # staged sequence of fixed caps (e.g. 25 -> 50 -> 100 -> 200). When
-    # adaptive convergence is disabled, the whole ceiling is fit as a
-    # single batch (previous fixed-count-only behaviour, unchanged).
     idx = 0
     is_first_batch = True
     while idx < max_refits:
@@ -10336,32 +8445,15 @@ def compute_uncertainty_bands(
         if cfg.adaptive_uncertainty_convergence:
             _acc_arr = np.array(negi_s2_acc)
             stats = _endpoint_ci_stats(_acc_arr)
-            # Reviewer fix: same checkpoint, same accumulated refits, read
-            # at the maximum's own index instead of the endpoint's - stored
-            # alongside (not instead of) the endpoint stats below, so both
-            # points' convergence histories are available from this one
-            # pass with no extra model fitting.
             stats_max = _maximum_ci_stats(_acc_arr)
             prev = convergence_checkpoints[-1] if convergence_checkpoints else None
 
-            # Width-based abs_change/pct_change kept for backward-compatible
-            # console/report text and plotting (report_convergence_
-            # extension_comparison, plot_uncertainty_convergence, etc. all
-            # read these two keys) - they no longer drive the stopping
-            # decision themselves (see pct_change_by_quantity below).
             prev_width = prev["endpoint_ci_width"] if prev is not None else None
             abs_change = None if prev_width is None else stats["endpoint_ci_width"] - prev_width
             pct_change = (
                 None if prev_width is None or prev_width == 0
                 else abs_change / prev_width
             )
-            # Per-quantity change, floor-guarded the same way
-            # `_rel_range_stable` is: `endpoint_median_negi` and
-            # `endpoint_ci_lower` in particular can sit close to (or
-            # straddle) zero, where dividing by the raw previous value
-            # would be undefined/explosive rather than meaningful -
-            # exactly the same concern recommendation 6 raised about
-            # coefficient of variation for local stability.
             _floor = float(cfg.trajectory_stability_jump_threshold)
             pct_change_by_quantity = {
                 q: (
@@ -10370,15 +8462,6 @@ def compute_uncertainty_bands(
                 )
                 for q in _CONVERGENCE_QUANTITIES
             }
-            # Reviewer fix (maximum-vs-endpoint convergence): same
-            # floor-guarded per-quantity change, computed for the
-            # maximum's own quantities instead of the endpoint's. Reporting
-            # only - does not feed into `local_window_stable` /
-            # `extended_window_stable` below, which continue to gate the
-            # adaptive refit-stopping rule on the endpoint alone (an
-            # intentional, unchanged design choice); this is read
-            # separately, downstream, to produce a maximum-specific
-            # convergence verdict rather than reusing the endpoint's.
             pct_change_by_quantity_maximum = {
                 q: (
                     None if prev is None
@@ -10404,13 +8487,6 @@ def compute_uncertainty_bands(
                     for q in _CONVERGENCE_QUANTITIES
                 )
 
-            # CRUX FIX (retained) + recommendation 2: also require the
-            # wider, stricter lookback window (see comment above
-            # `lookback`/`full_history_tol`) to show no checkpoint-to-
-            # checkpoint change bigger than `uncertainty_convergence_
-            # tolerance` in ANY of median/lower-CI/upper-CI before
-            # stopping - not just CI width, which can mask both endpoints
-            # drifting together.
             extended_window_stable = False
             if len(convergence_checkpoints) >= lookback:
                 window = convergence_checkpoints[-lookback:]
@@ -10433,18 +8509,6 @@ def compute_uncertainty_bands(
                 converged_early = True
                 break
 
-    # Single consolidated summary (one call, one optional warning) instead
-    # of a separate message per checkpoint: lists every checkpoint actually
-    # evaluated (refit count, CI width, absolute and relative change), then
-    # the one-line result.
-    # Even for the primary (non-percentile-sweep) call, the
-    # full per-checkpoint table used to go straight to the console/log
-    # every run. It's still fully computed and still fully available (via
-    # log_debug -> file log only when Config.debug=True, and via the
-    # separate uncertainty_convergence.csv export from
-    # compute_uncertainty_convergence_diagnostic) - only the CONSOLE-level
-    # message is now a short, fixed-size summary instead of one line per
-    # checkpoint.
     if cfg.adaptive_uncertainty_convergence and convergence_checkpoints:
         checkpoint_lines = "\n".join(
             f"  {c['refit_count']:>4d} refits | CI width = {c['endpoint_ci_width']:.5f} | "
@@ -10494,9 +8558,6 @@ def compute_uncertainty_bands(
             )
             if log_convergence_detail:
                 report_development(cfg, "\n" + condensed, level="warning")
-        # Full per-checkpoint detail: DEBUG level only (file log, never
-        # console, and only written at all when Config.debug=True) - see
-        # log_debug()'s console-handler configuration.
         log_debug(f"\nAdaptive convergence detail:\n{checkpoint_lines}\n{result_line}")
 
     negi_s1_folds    = np.array(negi_s1_acc)
@@ -11003,45 +9064,20 @@ def compute_uncertainty_convergence_diagnostic(
     if point_label not in ("endpoint", "maximum"):
         raise ValueError(f"point_label must be 'endpoint' or 'maximum', got {point_label!r}")
     point_idx = (len(negi.negi_s2) - 1) if point_label == "endpoint" else negi.s2_optimum_idx
-    end_idx = point_idx  # kept for the no-checkpoint-history fallback branch below
+    end_idx = point_idx
     quantities = tuple(f"{point_label}_{suffix}" for suffix in
                         ("mean_negi", "median_negi", "ci_lower", "ci_upper", "ci_width"))
-    # The verdict below judges convergence on these three specifically
-    # (recommendation 2) - the point's median and both CI bounds - not
-    # on the mean or the width. Width can stay constant while both bounds
-    # drift together, or wobble while the interval itself has settled; the
-    # bounds (and the median between them) are what a reader actually
-    # reads off the published band.
     verdict_quantities = tuple(f"{point_label}_{suffix}" for suffix in
                                 ("median_negi", "ci_lower", "ci_upper"))
 
-    # Ground truth for "what was actually published" comes from the object
-    # itself, not from Config.n_spatial_refits read independently.
     published_n_refits = int(uncertainty.negi_s2_folds.shape[0])
     checkpoints = list(uncertainty.convergence_checkpoints or [])
 
-    # Reviewer-fix hardening: a cached UncertaintyResults computed by a
-    # pipeline version before the maximum-specific convergence tracking
-    # was added will have non-empty `checkpoints` whose dicts only ever
-    # recorded "endpoint_*" keys - never "maximum_*". Reading `quantities`
-    # (which are "maximum_*" whenever point_label="maximum") off such a
-    # checkpoint would KeyError. Detect that schema mismatch explicitly and
-    # fall through to the same "nothing to diagnose" branch used for an
-    # empty checkpoint history, with a skip_reason that tells the user
-    # exactly what to do about it, rather than letting the pipeline crash.
     checkpoints_missing_fields = bool(checkpoints) and not all(
         q in checkpoints[0] for q in quantities
     )
 
     if not cfg.adaptive_uncertainty_convergence or not checkpoints or checkpoints_missing_fields:
-        # Adaptive convergence was switched off for this run, OR it was on
-        # but the `uncertainty` object has no checkpoint history to read -
-        # most commonly because it was restored from a cache entry written
-        # before this checkpoint history was tracked (or written by a run
-        # with adaptive convergence off). Either way, report SPECIFICALLY
-        # why there's nothing to diagnose rather than a bare "N/A", which
-        # could otherwise read as "this diagnostic isn't implemented"
-        # rather than "it had nothing to report for this run".
         if not cfg.adaptive_uncertainty_convergence:
             skip_reason = "adaptive convergence disabled for this run"
         elif checkpoints_missing_fields:
@@ -11073,9 +9109,6 @@ def compute_uncertainty_convergence_diagnostic(
             1, "source", "published (adaptive checkpoint; not recomputed)"
         )
 
-        # Pairwise transitions between CONSECUTIVE checkpoints actually
-        # evaluated during the adaptive walk (e.g. 25->50->75->..., not a
-        # fixed 25/50/100/200 schedule).
         transitions = []
         for i in range(len(checkpoints) - 1):
             row_from, row_to = checkpoints[i], checkpoints[i + 1]
@@ -11089,25 +9122,6 @@ def compute_uncertainty_convergence_diagnostic(
         transitions_df = pd.DataFrame(transitions)
 
         tol_pct = cfg.uncertainty_convergence_tolerance * 100.0
-        # Convergence verdict (review-pass fix, recommendations 2 and 3):
-        #
-        # 2. Judge convergence on the endpoint's MEDIAN, LOWER-CI, and
-        #    UPPER-CI individually, each against `tol_pct` - not on CI
-        #    width alone (see `verdict_quantities` above).
-        # 3. Only the most recent `cfg.uncertainty_convergence_
-        #    lookback_checkpoints` transitions are required to satisfy
-        #    that - not every transition since the first checkpoint. A
-        #    single early oscillation (before the walk has left its
-        #    transient phase) can no longer veto STABILIZED forever; what
-        #    matters is whether the estimate is settled NOW, over a
-        #    recent, still-rigorous window. If fewer transitions exist
-        #    than the configured lookback, all available transitions are
-        #    used.
-        #
-        # Labeled "STABILIZED" / "NOT YET STABILIZED" rather than "PASS"/
-        # "FAIL": this diagnostic never fails the pipeline or invalidates
-        # the published uncertainty bands - it only reports whether the
-        # endpoint has numerically settled down as the refit count grows.
         lookback_n = max(1, int(cfg.uncertainty_convergence_lookback_checkpoints))
         recent_transitions_df = transitions_df.tail(lookback_n)
         if len(recent_transitions_df) > 0:
@@ -11119,10 +9133,6 @@ def compute_uncertainty_convergence_diagnostic(
         else:
             verdict = None
 
-        # Engineering diagnostic detail only, gated to development mode.
-        # The pass/fail verdict is reported once, downstream, by
-        # print_uncertainty_consistency_summary(). Full detail still
-        # always reaches uncertainty_convergence.json regardless of mode.
         report_development(
             cfg,
             f"\nUncertainty convergence diagnostic (reading the "
@@ -11140,9 +9150,6 @@ def compute_uncertainty_convergence_diagnostic(
                 f"\nCheckpoint-to-checkpoint transitions (% change, tolerance {tol_pct:.0f}%):",
             )
             report_development(cfg, transitions_df.to_string(index=False))
-        # The verdict itself is reported once, by
-        # print_uncertainty_consistency_summary()'s "Publication
-        # convergence" line - not duplicated here.
 
     refit_counts = (
         [int(c["refit_count"]) for c in checkpoints] if checkpoints else [published_n_refits]
@@ -11260,11 +9267,6 @@ def report_uncertainty_bands(
     peak_iqr_idx  = int(np.argmax(p["negi_s2"][75] - p["negi_s2"][25]))
     n_refits      = len(uncertainty.negi_s2_folds)
 
-    # Explicit procedure description (Section 2): the bands are an EMPIRICAL
-    # 2.5th-97.5th percentile spread across independent spatial-block
-    # holdout refits, not a formal statistical confidence interval, unless
-    # the implemented method specifically justifies that interpretation.
-    # This does not change n_spatial_refits or the refit procedure itself.
     lower_pct = 2.5
     upper_pct = 97.5
     uncertainty_type_label = "95% spatial-refit uncertainty band (empirical 2.5th-97.5th percentile)"
@@ -11348,7 +9350,7 @@ def compute_negi_zero_crossing_diagnostics(
 
     scenario_specs = [
         ("Scenario 1", negi.negi_s1, negi.s1_optimum_idx, p["negi_s1"],
-         None),  # no per-point support array exists for Scenario 1
+         None),
         ("Scenario 2", negi.negi_s2, negi.s2_optimum_idx, p["negi_s2"],
          support.in_support_s2),
     ]
@@ -11479,15 +9481,6 @@ def summarize_spatial_refit_diagnostics(
     table.index.name = "Quantity"
     table = table.reset_index()
 
-    # Explicit procedure fields (Section 2 / item 6) - machine-readable
-    # record of the (unchanged) spatial-refit uncertainty procedure,
-    # attached to every row so the export is self-describing.
-    # Item N audit: this must be the number of refits actually completed
-    # (uncertainty.n_refits_used), not the configured ceiling
-    # (cfg.n_spatial_refits) - the adaptive-convergence loop may stop
-    # before reaching the ceiling. Both are exported, explicitly labeled,
-    # so a reader can never conflate "how many refits ran" with "what the
-    # maximum allowed was".
     table["spatial_refit_count"]            = int(uncertainty.n_refits_used)
     table["spatial_refit_count_ceiling"]    = int(cfg.n_spatial_refits)
     table["spatial_refit_converged_early"]  = bool(uncertainty.converged_early)
@@ -11500,7 +9493,6 @@ def summarize_spatial_refit_diagnostics(
     return table
 
 
-# SENSITIVITY ANALYSIS
 def run_sensitivity_analysis(
     negi: NEGIResults, s1: ScenarioTrajectory, cfg: Config
 ) -> SensitivityResults:
@@ -11534,7 +9526,6 @@ def run_sensitivity_analysis(
                         "Numerical_Maximum_NEGI":         negi_profile[best],
                     })
 
-    # Normalisation sanity checks
     for exp, ref_max in reference_max_by_exponent.items():
         check_val = _energy_cost(scenarios, cfg.reference_w0, exp, cfg).max() / ref_max
         assert np.isclose(check_val, 1.0, atol=1e-9), \
@@ -11572,68 +9563,36 @@ def report_sensitivity_analysis(sensitivity: SensitivityResults, cfg: Config) ->
     log_info(f"\nDistinct numerical maximum scenario values across parameter grid: {unique_optima}")
 
 
-# ============================================================================
-# COST-REGIME DIAGNOSTIC  (reporting layer on top of run_sensitivity_analysis)
-# ============================================================================
-# run_sensitivity_analysis() above is UNCHANGED and remains the underlying
-# calculation: it evaluates NEGI_s2(f) = alpha * b(f) - beta * E(f; w0) on
-# the alpha x beta x w0 x exponent grid and records the position of the
-# numerical maximum in each cell. The functions below only READ that grid
-# and describe its structure - where the selected Scenario 2 maximum
-# switches between a low-intervention and a high-intervention regime.
-#
-# Why the transition can be described by ONE boundary curve. With the
-# existing normalisation (see _energy_norm), the normalised cost term is
-#     E(f; w0) = (w0 / reference_w0) * g(f),   g(f) = f^gamma / max(f^gamma),
-# so, for alpha > 0,
-#     argmax_f [ alpha * b(f) - beta * E(f; w0) ]
-#       = argmax_f [ b(f) - c * g(f) ],   c = (beta / alpha) * (w0 / reference_w0).
-# The position of the maximum therefore depends on (alpha, beta, w0) ONLY
-# through the single effective cost ratio c. This is an algebraic property
-# of the existing formulation (it is not a new assumption and does not
-# change the NEGI mathematics); it is also checked numerically against the
-# grid (invariance_violations, grid_reproduction_mismatches below). A
-# regime boundary at c = c_b therefore maps to the boundary curve
-#     w0_boundary(alpha/beta) = reference_w0 * c_b * (alpha/beta),
-# which passes through w0 = reference_w0 * c_b at the reference alpha/beta.
-#
-# SCOPE OF INTERPRETATION. w0 is a resource-cost scaling coefficient: a
-# RELATIVE scaling parameter of the cost term (normalised by its value at
-# reference_w0). It is not a directly measured Jeddah water or energy
-# quantity and is not calibrated to any real-world data here. alpha and
-# beta are relative benefit/cost weights. The diagnostic describes how the
-# selected optimum depends on these decision parameters; it does not say
-# what their real-world values are.
 @dataclass
 class CostRegimeResult:
     """Result of compute_cost_regime_diagnostic() for one cost exponent."""
     exponent:                 float
     reference_w0:             float
     reference_alpha_over_beta: float
-    reference_effective_cost: float          # c at the reference (alpha, beta, w0)
+    reference_effective_cost: float
     n_grid_cells:             int
-    grid_reproduction_mismatches: int        # helper vs stored grid maxima
-    invariance_violations:    int            # cells with equal c but different maxima
-    monotone_nonincreasing:   bool           # maximum never moves UP as c rises
-    scan_c:                   np.ndarray     # effective cost ratios scanned
-    scan_position_pct:        np.ndarray     # maximum position (%) at each scanned c
-    jumps:                    pd.DataFrame   # every exact regime switch found
+    grid_reproduction_mismatches: int
+    invariance_violations:    int
+    monotone_nonincreasing:   bool
+    scan_c:                   np.ndarray
+    scan_position_pct:        np.ndarray
+    jumps:                    pd.DataFrame
     regime_detected:          bool
-    primary_jump:             Optional[dict]  # the largest jump (None if none)
-    split_pct:                float           # midpoint of the primary jump (nan if none)
-    low_regime_range_pct:     tuple           # (min, max) maximum position, low side
-    high_regime_range_pct:    tuple           # (min, max) maximum position, high side
+    primary_jump:             Optional[dict]
+    split_pct:                float
+    low_regime_range_pct:     tuple
+    high_regime_range_pct:    tuple
     dominant_jump_fraction:   float
     is_sharp:                 bool
     grid_low_fraction:        float
     grid_high_fraction:       float
     is_bimodal_on_grid:       bool
-    n_grid_cells_at_baseline: int             # cells whose maximum is 0% (no intervention)
-    reference_position_pct:   float           # maximum position at the reference c
+    n_grid_cells_at_baseline: int
+    reference_position_pct:   float
     reference_regime:         str
-    reference_boundary_w0:    float           # boundary at the reference alpha/beta
-    reference_distance_factor: float          # reference c / c_b (>1: cost above snap point)
-    boundary_table:           pd.DataFrame    # per alpha/beta boundary
+    reference_boundary_w0:    float
+    reference_distance_factor: float
+    boundary_table:           pd.DataFrame
     verdict:                  str
 
 
@@ -11665,9 +9624,8 @@ def _analyze_cost_regime_for_exponent(
     stored_pos = sub["Numerical_Maximum_Scenario (%)"].to_numpy(dtype=float)
     ratio = alpha / beta
     k_arr = w0 / cfg.reference_w0
-    c_arr = k_arr / ratio            # c = (beta/alpha) * (w0 / reference_w0)
+    c_arr = k_arr / ratio
 
-    # ---- (1) helper reproduces the stored grid maxima (same formula) ----
     mismatches = 0
     for a_v, b_v, w_v, pos_v in zip(alpha, beta, w0, stored_pos):
         profile = a_v * benefit - b_v * safe_divide(
@@ -11677,7 +9635,6 @@ def _analyze_cost_regime_for_exponent(
         if not np.isclose(pos_pct[int(np.argmax(profile))], pos_v, atol=1e-9):
             mismatches += 1
 
-    # ---- (2) algebraic invariance: equal c => equal maximum -------------
     c_key = np.round(c_arr, 9)
     invariance_violations = 0
     for key in np.unique(c_key):
@@ -11685,7 +9642,6 @@ def _analyze_cost_regime_for_exponent(
         if len(positions) > 1:
             invariance_violations += int((c_key == key).sum())
 
-    # ---- (3) exact scan of maximum position vs c ------------------------
     def _idx_at(c: float) -> int:
         return int(np.argmax(benefit - c * shape))
 
@@ -11702,8 +9658,6 @@ def _analyze_cost_regime_for_exponent(
         if scan_idx[i + 1] == scan_idx[i]:
             i += 1
             continue
-        # Locate every switch inside (scan_c[i], scan_c[i+1]] by bisection;
-        # more than one can hide in a single scan step.
         cur_c, cur_idx, end_c = float(scan_c[i]), int(scan_idx[i]), float(scan_c[i + 1])
         end_idx = int(scan_idx[i + 1])
         _guard = 0
@@ -11721,8 +9675,8 @@ def _analyze_cost_regime_for_exponent(
             after_idx = _idx_at(hi)
             jump_rows.append({
                 "effective_cost_boundary": float(hi),
-                "position_before_pct":     float(pos_pct[cur_idx]),   # cheaper side
-                "position_after_pct":      float(pos_pct[after_idx]),  # costlier side
+                "position_before_pct":     float(pos_pct[cur_idx]),
+                "position_after_pct":      float(pos_pct[after_idx]),
                 "jump_pct":                float(pos_pct[cur_idx] - pos_pct[after_idx]),
             })
             cur_c, cur_idx = hi, after_idx
@@ -11733,7 +9687,6 @@ def _analyze_cost_regime_for_exponent(
                  "position_after_pct", "jump_pct"],
     )
 
-    # ---- (4) primary regime transition ---------------------------------
     total_movement = float(scan_pos.max() - scan_pos.min())
     primary: Optional[dict] = None
     regime_detected = False
@@ -11772,9 +9725,8 @@ def _analyze_cost_regime_for_exponent(
         and grid_high_fraction >= cfg.cost_regime_min_cluster_fraction
     )
 
-    # ---- (5) reference case ---------------------------------------------
     ref_ratio = cfg.alpha_weight / cfg.beta_weight
-    ref_c     = 1.0 / ref_ratio                       # (beta/alpha) * (reference_w0 / reference_w0)
+    ref_c     = 1.0 / ref_ratio
     ref_pos   = float(pos_pct[_idx_at(ref_c)])
     if regime_detected:
         ref_regime = "high-intervention" if ref_pos > split_pct else "low-intervention"
@@ -11785,7 +9737,6 @@ def _analyze_cost_regime_for_exponent(
         ref_boundary_w0 = float("nan")
         ref_distance = float("nan")
 
-    # ---- (6) boundary as a function of alpha/beta ------------------------
     ratio_key = np.round(ratio, 9)
     rows = []
     w0_min, w0_max = float(w0.min()), float(w0.max())
@@ -11804,7 +9755,7 @@ def _analyze_cost_regime_for_exponent(
         if regime_detected:
             b_w0 = cfg.reference_w0 * primary["effective_cost_boundary"] * r_val
             in_range = bool(w0_min <= b_w0 <= w0_max)
-            regime_by_w0 = pos_by_w0 > split_pct                 # True = high-intervention
+            regime_by_w0 = pos_by_w0 > split_pct
             flips = np.where(regime_by_w0[:-1] != regime_by_w0[1:])[0]
             if len(flips):
                 br_lo, br_hi = float(w_vals[flips[0]]), float(w_vals[flips[0] + 1])
@@ -11834,7 +9785,6 @@ def _analyze_cost_regime_for_exponent(
         rows.append(row)
     boundary_table = pd.DataFrame(rows).sort_values("alpha_over_beta").reset_index(drop=True)
 
-    # ---- (7) verdict ------------------------------------------------------
     if not regime_detected:
         verdict = (
             "NO DISTINCT REGIMES: the selected Scenario 2 maximum moves "
@@ -12089,20 +10039,6 @@ def report_cost_regime_diagnostic(
     return payload
 
 
-# ============================================================================
-# DECISION ENVELOPE  (reporting layer: several distinct sensitivity ranges)
-# ============================================================================
-# The Scenario 2 maximum of the reference NEGI is ONE point. How far that
-# point moves depends on WHAT is varied, and the four kinds of variation
-# below are different in kind, so they are reported side by side and are
-# never averaged, pooled, or collapsed into a single "overall optimum":
-#   1. reference case            - primary fit, reference alpha/beta/w0
-#   2. spatial-refit range       - structural/model: refit on resampled
-#                                  spatial blocks (uncertainty.negi_s2_folds)
-#   3. archetype-percentile range - structural: alternative Scenario 2
-#                                  endpoints (percentile-sensitivity table)
-#   4. cost-weight range         - decision parameters: the alpha/beta/w0
-#                                  grid (relative scaling parameters)
 def _layer(name, kind, low, high, description, **extra) -> dict:
     return {
         "layer": name, "kind": kind,
@@ -12130,7 +10066,6 @@ def compute_decision_envelope(
         negi_low=ref_negi, negi_high=ref_negi, n=1,
     )]
 
-    # ---- spatial refits ------------------------------------------------
     if uncertainty is not None and getattr(uncertainty, "negi_s2_folds", None) is not None \
             and uncertainty.negi_s2_folds.ndim == 2 and uncertainty.negi_s2_folds.shape[1] == len(pct):
         fold_pos = pct[np.argmax(uncertainty.negi_s2_folds, axis=1)]
@@ -12146,7 +10081,6 @@ def compute_decision_envelope(
             negi_high=float(np.percentile(fold_max_negi, 97.5)),
         ))
 
-    # ---- archetype percentile -----------------------------------------
     if percentile_table is not None and len(percentile_table) \
             and "maximum_scenario_pct" in percentile_table.columns:
         pos = percentile_table["maximum_scenario_pct"].to_numpy(dtype=float)
@@ -12163,7 +10097,6 @@ def compute_decision_envelope(
             negi_high=float(percentile_table["maximum_negi"].max()),
         ))
 
-    # ---- cost weights ---------------------------------------------------
     table = sensitivity.table
     at_default = table[isclose_mask(table["Exponent"], cfg.sensitivity_default_exponent)]
     col = "Numerical_Maximum_Scenario (%)"
@@ -12182,7 +10115,6 @@ def compute_decision_envelope(
         all_exponents_high_pct=float(table[col].max()),
     ))
 
-    # ---- evidence-based assessment (per layer; nothing is pooled) -------
     by_name = {l["layer"]: l for l in layers}
     structural = [l for l in layers if l["kind"].startswith("structural")]
     cost_layer = by_name["Cost-weight range"]
@@ -12199,7 +10131,7 @@ def compute_decision_envelope(
     structural_narrower = bool(structural_widths and max(structural_widths) < cost_layer["width_pct"])
     stable_location = bool(structural_all_low and structural_narrower)
 
-    def _rng(l):  # "a-b%" (or "a%" when the range is a point)
+    def _rng(l):
         lo, hi = l["position_low_pct"], l["position_high_pct"]
         return f"{lo:.2f}%" if np.isclose(lo, hi) else f"{lo:.2f}-{hi:.2f}%"
 
@@ -12295,7 +10227,6 @@ def report_decision_envelope(envelope: dict, cfg: Config, summary: SummaryLog) -
     return envelope
 
 
-# CONDITIONAL NDVI-LST SLOPES
 def build_ndbi_quantile_bins(
     df: pd.DataFrame, n_bins: int, bin_names: list[str]
 ) -> list[tuple]:
@@ -12723,20 +10654,6 @@ def plot_ndvi_continuous_adjustment(
     )
 
 
-# ESTIMATOR-LEVEL FIX FOR FIGURE 6
-#
-# compute_conditional_ndvi_lst_slopes() (four independent per-bin
-# regressions) and compute_ndvi_ndbi_continuous_adjustment() (one linear
-# NDVI:NDBI interaction term) are both left completely unchanged above.
-# The functions below add a THIRD, more flexible estimator - a continuous
-# spline-basis varying-coefficient (GAM-style) model - and make IT the
-# estimator behind the primary Figure 6, because it is the only one of
-# the three that lets the adjusted NDVI-LST slope vary nonlinearly and
-# continuously with NDBI without assuming a single global linear
-# interaction and without discretising NDBI into disconnected bins.
-# Nothing in this section touches XGBoost, the NEGI formula, either
-# scenario trajectory, or the uncertainty/robustness classification logic
-# used elsewhere in the pipeline.
 
 def _build_varying_coefficient_design(
     ndvi: np.ndarray, ndbi: np.ndarray, elevation: np.ndarray,
@@ -12935,7 +10852,6 @@ def compute_ndvi_ndbi_varying_coefficient_gam(
     ndbi_grid = np.linspace(grid_lo, grid_hi, cfg.varying_coef_grid_points)
     g_hat = _evaluate_g_of_ndbi(fit, ndbi_grid)
 
-    # Requirement 6: local effective support around each grid point.
     half_width = cfg.varying_coef_support_window_halfwidth
     obs_support, block_support = [], []
     for x in ndbi_grid:
@@ -12946,7 +10862,6 @@ def compute_ndvi_ndbi_varying_coefficient_gam(
     block_support = np.array(block_support)
     low_support = block_support < cfg.varying_coef_low_support_blocks
 
-    # Requirement 3: spatial_block spatial-block bootstrap CI for g(NDBI).
     unique_blocks = np.unique(blocks)
     n_unique_blocks = len(unique_blocks)
     block_to_idx = {b: np.where(blocks == b)[0] for b in unique_blocks}
@@ -12962,7 +10877,6 @@ def compute_ndvi_ndbi_varying_coefficient_gam(
     ci_lower = np.percentile(samples, 2.5, axis=0)
     ci_upper = np.percentile(samples, 97.5, axis=0)
 
-    # Point-estimate zero-crossing(s), reported alongside local support.
     sign_changes = np.where(np.diff(np.sign(g_hat)) != 0)[0]
     zero_crossings = []
     for i in sign_changes:
@@ -13172,18 +11086,6 @@ def plot_ndvi_adjusted_slope_curve(
                      color=cfg.color_accent, alpha=0.08, hatch="////", linewidth=0,
                      interpolate=True,
                      label=f"CI where local support < {result.low_support_block_threshold} blocks")
-    # Plot with x aligned to the full grid and NaN gaps (np.where), not
-    # boolean-indexed subsets (grid[~low]/grid[low]). Boolean indexing
-    # collapses gaps in the array: low-support is a tails phenomenon (thin
-    # support at both the low- and high-NDBI ends of the grid), so
-    # grid[low]/g_hat[low] silently concatenate the two disjoint tail
-    # segments, and ax.plot() then draws a spurious straight connector
-    # jumping from one tail directly to the other across the entire
-    # well-supported middle - visually a fake "different trajectory" that
-    # isn't part of g(NDBI) at all. NaN-gapped arrays keep each tail as its
-    # own broken-off dashed segment, matching what the caption already
-    # claims ("dashed segments ... mark thin local support" - i.e. the same
-    # curve, merely dashed, not a second curve).
     g_hat_supported = np.where(~low, g_hat, np.nan)
     g_hat_thin = np.where(low, g_hat, np.nan)
     ax.plot(grid, g_hat_supported, color=cfg.color_accent, linewidth=2.4,
@@ -13193,13 +11095,6 @@ def plot_ndvi_adjusted_slope_curve(
 
     for zc in result.zero_crossings:
         ax.axvline(zc["ndbi"], color="black", lw=1.0, ls="-.", alpha=0.6)
-        # Label as a "fitted sign transition", not a bare "zero crossing":
-        # the point estimate crosses zero here, but per zc["ci_excludes_zero_here"]
-        # (already computed above from the bootstrap CI at the adjacent grid
-        # points) the CI may already span zero at/near the crossing, so this
-        # is a model-estimated transition, not a precisely identified
-        # threshold. Flag it directly on the annotation when that's the case,
-        # rather than only in the caption below.
         _zc_note = "" if zc["ci_excludes_zero_here"] else "\n(CI already spans zero here)"
         ax.annotate(f"fitted sign transition\nNDBI ≈ {zc['ndbi']:.3f}{_zc_note}", xy=(zc["ndbi"], 0),
                     xytext=(8, 30), textcoords="offset points", fontsize=8.5,
@@ -13227,11 +11122,6 @@ def plot_ndvi_adjusted_slope_curve(
 
     _zc_caveat = ""
     if result.zero_crossings:
-        # Data-driven, not a hardcoded assertion: only claim the CI spans
-        # zero near the crossing when zc["ci_excludes_zero_here"] (computed
-        # from the actual bootstrap CI above) says so for at least one
-        # crossing, so this caption can't silently go stale if a future
-        # refit ever does identify a crossing with a CI that excludes zero.
         _any_ci_spans_zero = any(not zc["ci_excludes_zero_here"] for zc in result.zero_crossings)
         _zc_caveat = (
             " The fitted curve's sign transition(s) are interpreted as model-estimated "
@@ -13414,7 +11304,6 @@ def summarize_conditional_ndvi_slope_signs(
     }
 
 
-# RESPONSE COMPUTATIONS
 def compute_ndbi_response_sweep(model_results: ModelResults, cfg: Config) -> dict:
     """Sweep NDBI at fixed NDVI and fixed Elevation/ST_EMIS/ST_EMSD to trace
     the predicted LST response curve."""
@@ -13425,7 +11314,6 @@ def compute_ndbi_response_sweep(model_results: ModelResults, cfg: Config) -> dic
         df["NDBI"].quantile(cfg.ndbi_sweep_quantile_high),
         cfg.ndbi_sweep_points,
     )
-    # Elevation, ST_EMIS and ST_EMSD held at their reference (median) values.
     sweep_df = build_feature_frame(
         np.full(cfg.ndbi_sweep_points, df["NDVI"].median()),
         ndbi_range,
@@ -13503,12 +11391,6 @@ def compute_saturation_diagnostic(
     }
 
 
-# Interpretive diagnostics (peer review)
-#
-# Purely descriptive / diagnostic reporting requested by reviewers. Nothing
-# here changes the XGBoost model, the NEGI equations, the scenario
-# trajectories, the empirical NDVI-NDBI spline, the bootstrap procedure, or
-# any figure's underlying data.
 
 
 
@@ -13619,10 +11501,6 @@ def compute_ndbi_binning_robustness(
     quartile_df["binning"] = "quartile (4 bins)"
     tercile_df["binning"] = "tercile (3 bins)"
 
-    # Uses the same classification logic as summarize_conditional_ndvi_slope_signs
-    # (called separately, on the primary quartile table, in main()) - factored
-    # out into _slope_sign_pattern so this comparison doesn't re-trigger that
-    # function's own logging/summary side effects for the quartile table.
     quartile_sign = _slope_sign_pattern(quartile_df)
     tercile_sign = _slope_sign_pattern(tercile_df)
 
@@ -13763,7 +11641,6 @@ def report_qq_summary(residuals: np.ndarray, cfg: Config, summary: SummaryLog) -
 
 
 
-# LOWESS / BREUSCH-PAGAN HELPERS
 def _lowess_smooth(
     x: np.ndarray, y: np.ndarray, frac: float = 0.3, n_points: int = 100
 ) -> tuple[np.ndarray, np.ndarray]:
@@ -13835,16 +11712,10 @@ def _breusch_pagan_test(
         }
 
 
-# ANNOTATION / CAPTION HELPERS
 def annotation_caption(
     annotations: dict, sep: str = "  |  ", wrap_width: int = 110
 ) -> str:
     """Build the NEGI comparison figure footer caption string."""
-    # Explicitly scoped to "S2" (see INTERPRETIVE CLARIFICATION note above
-    # compute_negi_results()) so the footer cannot be read as describing
-    # Scenario 1, which never crosses into credited cooling. The baseline
-    # (<=0%) case is worded as "no credited cooling" rather than a percent
-    # crossing, to avoid the same "First cooling (0%)" misreading risk.
     if not np.isfinite(annotations["first_cooling_pct"]):
         first_cooling = "S2 1st cooling=none"
     elif annotations["first_cooling_pct"] <= 0.0:
@@ -13872,8 +11743,6 @@ def annotation_caption(
     )
 
 
-# PLOTTING FUNCTIONS
-# Validation
 def plot_actual_vs_predicted(
     validation: ValidationResults, data: DatasetBundle, cfg: Config
 ) -> Path:
@@ -13943,7 +11812,6 @@ def plot_model_comparison(
                     section="Model comparison")
 
 
-# Residual diagnostics
 def plot_residuals_histogram(resid: ResidualDiagnostics, cfg: Config) -> Path:
     """Single consolidated histogram figure (Gaussian fit + KDE)."""
     arr          = resid.residuals
@@ -14042,7 +11910,6 @@ def plot_residual_spatial_map(
         f"Global Moran's I = {moran['morans_i']:.3f} (p = {moran['p_value']:.3g})"
         if np.isfinite(moran["morans_i"]) else "Moran's I unavailable"
     )
-    # Append interpretive note when autocorrelation is significant.
     if np.isfinite(moran["p_value"]) and moran["p_value"] < 0.05:
         moran_str += (
             " - Residual spatial dependence remains after spatial validation.  "
@@ -14059,7 +11926,6 @@ def plot_residual_spatial_map(
                     caption=caption, section="Supplementary diagnostics")
 
 
-# Feature importance
 def plot_feature_importance(fi: FeatureImportanceResult, cfg: Config) -> Path:
     """Plot the permutation feature importance bar chart."""
     table = fi.table
@@ -14099,7 +11965,6 @@ def plot_feature_importance(fi: FeatureImportanceResult, cfg: Config) -> Path:
                     "normal approximation, given the small number of seeds).")
 
 
-# Response curves
 def plot_ndvi_vs_lst(df: pd.DataFrame, cfg: Config) -> Path:
     """Plot the NDVI-LST scatter relationship."""
     fig, ax = plt.subplots(figsize=cfg.default_figsize)
@@ -14289,16 +12154,8 @@ def plot_ndvi_conditional_by_ndbi_bins(
         apply_grid(ax)
         ax.set_ylim(conditional_ylim)
 
-    # Title/caveat vertical gap must be expressed relative to the figure's
-    # physical height, not as a bare figure-fraction constant: figsize
-    # height varies with n_bins (5.5" for the n_bins<=3 row layout vs 10"
-    # for the 2x2 quartile grid), so a fixed fraction gap (e.g. 0.98 vs a
-    # hardcoded 0.955) collapses to too little absolute clearance for short
-    # figures and the two text layers overlap (this was the S18 bug: the
-    # tercile robustness figure uses the short 5.5"-tall layout while
-    # Figure 6 and S20 use the 10"-tall quartile layout).
     title_y = 0.98
-    title_caveat_gap_in = 0.25  # target physical clearance between the two lines
+    title_caveat_gap_in = 0.25
     caveat_y = title_y - (title_caveat_gap_in / figsize[1])
     fig.suptitle(title, fontsize=13, fontweight="normal", y=title_y)
     fig.text(0.5, caveat_y,
@@ -14317,7 +12174,6 @@ def plot_ndvi_conditional_by_ndbi_bins(
     return save_fig(fig, fig_filename, cfg, use_tight_layout=False, caption=caption)
 
 
-# Response surface
 def plot_response_surface(
     surface: dict, df: pd.DataFrame, s2: ScenarioTrajectory, cfg: Config
 ) -> Path:
@@ -14382,7 +12238,6 @@ def plot_scenario2_data_support(
                     section="Supplementary diagnostics")
 
 
-# NEGI scenario plots
 def plot_negi_smoothing_robustness(
     negi: NEGIResults, smoothing: dict, s2: ScenarioTrajectory,
     cfg: Config, summary: SummaryLog,
@@ -14392,8 +12247,6 @@ def plot_negi_smoothing_robustness(
     assessment, not a claim of a robust interior optimum)."""
     cooling_savgol = negi.baseline_lst - smoothing["lst_s2_smooth"]
     cooling_spline = negi.baseline_lst - smoothing["lst_s2_spline"]
-    # Both smoothed variants share the primary reference_benefit_scale so they are
-    # directly comparable on the same axis (deliberate design choice).
     negi_savgol = (cfg.alpha_weight *
                    safe_divide(np.maximum(cooling_savgol, 0.0), negi.reference_benefit_scale)
                    - cfg.beta_weight * negi.energy_norm_sqrt)
@@ -14450,17 +12303,8 @@ def plot_negi_scenario_comparison(
     ax.axhline(0, color=cfg.color_neutral, linestyle="-", linewidth=1.1)
     ax.text(1.5, 0.012, "Break-even (NEGI = 0)",
             fontsize=9, color=cfg.color_neutral, va="bottom", style="italic")
-    # Mark the highest evaluated point on the trajectory without implying a
-    # robust interior optimum (see Methods §[X]). When the maximum's CI is
-    # known to include zero (non-robust), this is flagged directly on the
-    # figure - not only in the console warning / summary.add_warning - via
-    # a distinct marker, legend label, and annotation.
     _s2_max_robust = annotations.get("max_negi_s2_robust")
     if _s2_max_robust is False:
-        # Report whichever check(s) actually failed for THIS maximum,
-        # instead of assuming "non-robust" always means "CI crosses zero"
-        # (item J/M audit finding). Falls back to a generic "NON-ROBUST"
-        # label if no specific reason field is available (older callers).
         _reasons = []
         if annotations.get("max_negi_s2_ci_includes_zero"):
             _reasons.append("CI crosses zero")
@@ -14490,13 +12334,6 @@ def plot_negi_scenario_comparison(
             label="Highest evaluated trajectory value",
         )
     if np.isfinite(negi.first_cooling_pct):
-        # See INTERPRETIVE CLARIFICATION note above compute_negi_results():
-        # this marker/annotation describes Scenario 2's first-cooling
-        # crossing only. It is prefixed "Scenario 2" so it cannot be
-        # misread as describing the Scenario 1 curve sharing this axes,
-        # and the baseline (<=0%) case is worded separately rather than as
-        # "First cooling (0%)", which reads as an intervention result when
-        # it is actually the Delta T = 0 baseline with no credited cooling.
         if negi.first_cooling_pct <= 0.0:
             _s2_cool_label = "Baseline (no credited cooling)"
         else:
@@ -14509,18 +12346,6 @@ def plot_negi_scenario_comparison(
             xytext=(negi.first_cooling_pct + 3, ax.get_ylim()[0] * 0.5),
             fontsize=8, color=cfg.color_neutral, style="italic",
         )
-    # Scenario 1 sign-convention note (interpretation_text
-    # "scenario1_sign_convention"): Scenario 1's descent toward its NEGI
-    # floor is a clipped-benefit / rising-cost effect, not a cooling
-    # trajectory, and should not be read against the Scenario-2-only
-    # cooling marker above just because both curves share this axes.
-    #
-    # Moved out of the axes (was ax.text at axes-fraction (0.02, 0.02),
-    # bottom-left) to a fig.text below the axes instead: the legend is
-    # also anchored "lower left", so the in-axes text box and the legend
-    # were competing for the same corner and visually colliding. Placing
-    # it as its own figure-level line above the existing annotation-caption
-    # footer keeps both fully clear of the legend.
     set_axis_labels(ax, SCENARIO_AXIS_LABEL, "NEGI")
     set_title(ax, "NEGI Scenario Comparison")
     fig.text(
@@ -14589,11 +12414,6 @@ def plot_negi_uncertainty_bands_primary(
     ax.text(1.5, 0.01, "Break-even (NEGI = 0)",
             fontsize=9, color=cfg.color_neutral, va="bottom", style="italic")
 
-    # Integrity-pass addition: when the trajectory ENDPOINT's own 95% CI
-    # already spans zero, that is the more decision-relevant fact for this
-    # figure than the location of peak IQR elsewhere on the trajectory -
-    # flag it directly instead. No uncertainty arithmetic is changed; this
-    # only chooses which already-computed quantity to annotate.
     endpoint_ci_lo = float(p["negi_s2"][2.5][-1])
     endpoint_ci_hi = float(p["negi_s2"][97.5][-1])
     endpoint_ci_crosses_zero = endpoint_ci_lo <= 0.0 <= endpoint_ci_hi
@@ -14808,8 +12628,6 @@ def plot_sensitivity_maximum_evaluated_negi(sensitivity: SensitivityResults, cfg
                     section="Supplementary diagnostics")
 
 
-# Backward-compatible alias for any external call site that still
-# references the old function name.
 plot_sensitivity_optimal_negi = plot_sensitivity_maximum_evaluated_negi
 
 
@@ -14837,13 +12655,6 @@ def plot_scenario2_percentile_sensitivity(
     ci_upper = table["endpoint_ci_upper"].to_numpy(dtype=float)
     robust = table["endpoint_robust"].to_numpy()
 
-    # Drawn as independent vertical CI bars (not point-relative error bars):
-    # endpoint_ci_lower/upper come from the spatial-refit distribution
-    # (compute_uncertainty_bands), a different quantity from the single
-    # deployed-model point estimate (endpoint_negi) - the point is not
-    # guaranteed to fall inside its own refit-distribution interval, so a
-    # standard errorbar(yerr=...) (which requires yerr >= 0 relative to the
-    # point) is not the right primitive here.
     ax.vlines(x, ci_lower, ci_upper, color=cfg.color_neutral,
               linewidth=1.4, zorder=2, label="95% spatial-refit interval")
     ax.hlines(ci_lower, x - 0.4, x + 0.4, color=cfg.color_neutral, linewidth=1.4, zorder=2)
@@ -14851,7 +12662,7 @@ def plot_scenario2_percentile_sensitivity(
     ax.plot(x, y, linestyle="--", linewidth=1.2, color=cfg.color_neutral,
             alpha=0.6, zorder=1)
 
-    robust_mask = robust == True   # noqa: E712 - explicit vs. None/NaN
+    robust_mask = robust == True   # noqa: E712
     nonrobust_mask = robust == False  # noqa: E712
     undetermined_mask = ~(robust_mask | nonrobust_mask)
 
@@ -15034,7 +12845,6 @@ def plot_cost_regime_boundary(result: CostRegimeResult, cfg: Config) -> Path:
     )
 
 
-# MAIN PIPELINE
 def main(cfg: Config = CFG) -> None:
     """Run the full NEGI modelling, validation, scenario, and reporting pipeline end to end."""
     run_start = time.monotonic()
@@ -15043,14 +12853,12 @@ def main(cfg: Config = CFG) -> None:
     _assert_console_verbosity_invariant(cfg)
     log_headline("JEDDAH LST \u2014 NEGI FRAMEWORK")
 
-    # Setup
     repro_info = print_reproducibility_info(cfg)
     setup_directories(cfg)
     apply_plot_style(cfg)
     summary = SummaryLog()
     PREDICTION_CACHE.clear()
 
-    # Step 1: Data
     report_step("[STEP 1] Loading dataset...")
     df   = load_dataset(cfg)
     log_info(f"  Loaded {len(df):,} rows from {cfg.data_path}")
@@ -15067,7 +12875,6 @@ def main(cfg: Config = CFG) -> None:
     summary.log("EDA", "NDBI-LST Pearson r",  f"{corr_ndbi_lst:.4f}")
     summary.log("EDA", "NDVI-NDBI Pearson r", f"{corr_ndvi_ndbi:.4f}")
 
-    # Step 2: Model fitting
     report_step("[STEP 2] Fitting XGBoost model (RandomizedSearchCV)...")
     model_results = run_or_cached_stage(
         cfg, "xgb_tuning", cfg.run_model_tuning,
@@ -15083,20 +12890,6 @@ def main(cfg: Config = CFG) -> None:
         lambda: fit_model(data, cfg, summary),
         step_label="[STEP 2] XGBoost tuning",
     )
-    # Defense-in-depth (belt-and-braces alongside the _dataset_fingerprint
-    # fix above): even a correct cache key can, in principle, miss some
-    # future config knob that changes the row count of `df`/`data`. If a
-    # cached `model_results` ever carries a DatasetBundle whose length
-    # disagrees with the `data` built fresh just above, every downstream
-    # line that mixes `data.*` with `model_results.data.*` (or with
-    # `validation.holdout_pred`, which is predicted from
-    # `model_results.data.X_test`) would silently misalign - the exact
-    # failure mode behind
-    #   ValueError: operands could not be broadcast together with shapes (6782,) (5867,)
-    # in compute_residual_diagnostics(). Treat that disagreement as a
-    # stale/invalid cache entry: discard it and recompute fresh rather
-    # than letting two differently-sized datasets flow through the rest
-    # of the pipeline.
     if len(model_results.data.df) != len(data.df):
         log_warning(
             "  [cache] stale 'xgb_tuning' cache entry: cached DatasetBundle "
@@ -15122,7 +12915,6 @@ def main(cfg: Config = CFG) -> None:
     log_headline("\n[2] XGBoost tuning")
     log_headline(f"Best inner GroupKFold R²: {model_results.search.best_score_:.3f}")
 
-    # Step 3: Validation
     report_step("[STEP 3] Evaluating model...")
     report_step("[STEP 3a] Nested GroupKFold CV (honest, leakage-free outer-fold R²)...")
     nested_cv = run_or_cached_stage(
@@ -15155,7 +12947,6 @@ def main(cfg: Config = CFG) -> None:
     log_headline(f"Calibration slope = {validation.calibration_slope:.3f}")
     log_headline(f"Mean bias = {validation.calibration_bias:.3f} °C")
 
-    # Step 4: Residual diagnostics
     report_step("[STEP 4] Residual diagnostics...")
     _t0 = time.perf_counter()
     resid = compute_residual_diagnostics(validation, data)
@@ -15182,21 +12973,10 @@ def main(cfg: Config = CFG) -> None:
         )
         log_headline(f"Residual Moran's I = {moran_i:.3f} \u2014 {dependence_note}.")
 
-    # Spatial autocorrelation comparison table (engineering-refinement item 2):
-    # raw LST vs. Linear Regression residuals vs. XGBoost residuals, same
-    # weighting/permutation settings as the diagnostic above - contextual
-    # reporting only, does not change the diagnostic or its flag.
     spatial_autocorr_df = compute_spatial_autocorrelation_summary(data, spatial_resid, cfg)
     if spatial_autocorr_df is not None:
         save_csv(spatial_autocorr_df, cfg.data_dir / "spatial_autocorrelation_summary.csv", cfg=cfg, debug_only=True)
 
-        # moran_comparison.csv (robustness-symmetry audit, item 4): the same
-        # three Moran's I values already computed above by
-        # compute_spatial_autocorrelation_summary - read verbatim, never
-        # recomputed - reshaped into the single-row wide format requested
-        # for this benchmark (Observed / Linear residual / XGBoost residual
-        # / Percent reduction), as a companion to the existing long-format
-        # spatial_autocorrelation_summary.csv (unchanged, still exported).
         _sa = spatial_autocorr_df.set_index("Series")["Moran's I"]
         _obs_i = float(_sa.get("Raw observed LST", np.nan))
         _lr_i  = float(_sa.get("Linear Regression residuals", np.nan))
@@ -15226,12 +13006,6 @@ def main(cfg: Config = CFG) -> None:
     save_csv(calibration_table, cfg.data_dir / "calibration_metrics.csv", cfg=cfg, debug_only=True)
     log_info(f"\nCalibration metrics table:\n{calibration_table.to_string(index=False)}")
 
-    # holdout_predictions.csv (publication-readiness refactor, item 1): the
-    # untouched confirmatory holdout set's observed vs. predicted LST, one
-    # row per held-out pixel. `data.y_test` / `validation.holdout_pred` are
-    # already-computed arrays (used elsewhere for the actual-vs-predicted
-    # figure and the calibration table above) - this only writes them to a
-    # standard-mode CSV; nothing is recalculated.
     holdout_predictions_df = pd.DataFrame({
         "Observed LST":  np.asarray(data.y_test.values, dtype=float),
         "Predicted LST": np.asarray(validation.holdout_pred, dtype=float),
@@ -15240,14 +13014,6 @@ def main(cfg: Config = CFG) -> None:
     })
     save_csv(holdout_predictions_df, cfg.data_dir / "holdout_predictions.csv")
 
-    # model_performance_summary.csv (publication-readiness refactor, item 1):
-    # one-row consolidation of the validation metrics already computed by
-    # the nested GroupKFold CV, repeated spatial-holdout validation, and the
-    # untouched confirmatory holdout - the exact numbers already printed to
-    # Reproducibility_Report.txt above - plus the calibration metrics table
-    # computed immediately above. No metric is recomputed; this only
-    # gathers already-computed ValidationResults fields and the calibration
-    # table's single row into one publication-facing file.
     model_performance_summary_df = pd.concat(
         [
             pd.DataFrame([{
@@ -15264,7 +13030,6 @@ def main(cfg: Config = CFG) -> None:
     )
     save_csv(model_performance_summary_df, cfg.data_dir / "model_performance_summary.csv")
 
-    # Step 5: Benchmark comparison
     report_step("[STEP 5] Benchmark model comparison...")
     comparison_df = run_or_cached_stage(
         cfg, "benchmarks", cfg.run_benchmarks,
@@ -15283,17 +13048,11 @@ def main(cfg: Config = CFG) -> None:
         lambda: compare_models(model_results, cfg, summary, nested_cv),
         step_label="[STEP 5] Benchmark model comparison",
     )
-    # Audit #10 fix: compare_models() writes benchmark_comparison.csv and its
-    # summary-report rows as SIDE EFFECTS, which run_or_cached_stage() skips
-    # on a cache hit - so a cached run left a possibly stale CSV on disk and
-    # no "Model comparison" rows in the summary report. Re-export from the
-    # (cached) result so every run's outputs are complete and current.
     if _CACHE_STAGE_STATUS.get("benchmarks") == "cache hit":
         _replay_benchmark_reporting(comparison_df, cfg, summary)
     log_headline("\n[5] Benchmark comparison completed "
                  f"(metrics: {cfg.data_dir / 'benchmark_comparison.csv'}).")
 
-    # Step 6: Feature importance
     report_step("[STEP 6] Permutation feature importance...")
     fi = run_or_cached_stage(
         cfg, "permutation_importance", cfg.run_permutation_importance,
@@ -15314,7 +13073,6 @@ def main(cfg: Config = CFG) -> None:
         f"Permutation importance; NDVI\u2013NDBI r = {corr_ndvi_ndbi:.3f}."
     )
 
-    # Step 7: Scenario trajectories
     report_step("[STEP 7] Computing scenario trajectories...")
     baseline, s1, s2 = run_scenario_trajectories(model_results, cfg, summary)
     summary.log(
@@ -15322,12 +13080,6 @@ def main(cfg: Config = CFG) -> None:
         f"{cfg.s2_archetype_ndbi_percentile * 100:.0f}%",
     )
 
-    # Integrity-pass addition (item 5): spatial-clustering diagnostic for
-    # the primary Scenario 2 archetype subset. Recomputes the same
-    # deterministic, model-free archetype selection already made inside
-    # run_scenario_trajectories() (same df, same percentile), so it reports
-    # on - and never alters - the endpoint already fixed above. Does not
-    # touch the existing Moran's I diagnostic computed elsewhere.
     s2_archetype_diagnostics = compute_scenario2_archetype_spatial_diagnostics(
         model_results.data.df_train, cfg, summary,
     )
@@ -15337,7 +13089,6 @@ def main(cfg: Config = CFG) -> None:
         ", ".join(f"{p * 100:.0f}%" for p in cfg.s2_sensitivity_percentiles),
     )
 
-    # Step 8: Tree artifact / staircase diagnostics
     report_step("[STEP 8] Tree artifact / staircase diagnostics...")
     tree_artifact_diagnostics(s1.lst, "Scenario 1", cfg, summary)
     tree_artifact_diagnostics(s2.lst, "Scenario 2", cfg, summary)
@@ -15345,7 +13096,6 @@ def main(cfg: Config = CFG) -> None:
     local_gradient_diagnostics(s2.lst, s2.scenario_pct, "Scenario 2", summary)
     smoothing = compute_display_smoothing(s1, s2, cfg)
 
-    # Step 9: NEGI computation
     report_step("[STEP 9] Computing NEGI results...")
     negi, reference_cooling_c = compute_negi_results(baseline, s1, s2, cfg)
     report_negi_scenario_diagnostics(negi, reference_cooling_c, cfg, summary)
@@ -15355,7 +13105,6 @@ def main(cfg: Config = CFG) -> None:
     check_trajectory_stability(negi.negi_s2, negi.scenarios, "Scenario 2", cfg, summary)
     report_boundary_maximum_assessment(negi, cfg)
 
-    # Step 10: Support diagnostics
     report_step("[STEP 10] Feature-space support diagnostics...")
     support = compute_support_diagnostics(model_results, s1, s2, cfg, summary)
     report_data_support_check(s2, negi, support, cfg, summary)
@@ -15371,14 +13120,10 @@ def main(cfg: Config = CFG) -> None:
                            else "outside formal feature-space support")
     )
 
-    # Step 10b: Joint multivariate support diagnostic (Task 1) - a SEPARATE
-    # diagnostic in addition to, not a replacement of, the marginal
-    # feature-space support check above.
     report_step("[STEP 10b] Joint multivariate feature-space support diagnostic...")
     joint_support = compute_joint_multivariate_support(support, s1, s2, cfg, summary)
     joint_support_df = report_joint_multivariate_support(joint_support, cfg)
 
-    # Step 11: Uncertainty bands
     report_step("[STEP 11] Computing uncertainty bands (spatial refits)...")
     uncertainty = run_or_cached_stage(
         cfg, "uncertainty_bands", cfg.run_uncertainty,
@@ -15394,16 +13139,6 @@ def main(cfg: Config = CFG) -> None:
             ndbi_sweep_quantile_low=cfg.ndbi_sweep_quantile_low,
             ndbi_sweep_quantile_high=cfg.ndbi_sweep_quantile_high,
             scenario_step=cfg.scenario_step,
-            # These govern the adaptive convergence loop's
-            # STOPPING RULE (whether/when fitting stops early), so a change
-            # to any of them can change n_refits_used, converged_early, and
-            # convergence_checkpoints even when nothing else about the
-            # inputs changed. Folding them into the cache key means a
-            # config-only change to the convergence behaviour now produces
-            # a fresh cache key automatically - no stale cache entry can be
-            # silently reused, and every cache hit is guaranteed to carry
-            # real checkpoint history for the convergence settings that
-            # produced it.
             adaptive_uncertainty_convergence=cfg.adaptive_uncertainty_convergence,
             uncertainty_convergence_check_interval=cfg.uncertainty_convergence_check_interval,
             uncertainty_convergence_min_refits=cfg.uncertainty_convergence_min_refits,
@@ -15417,35 +13152,16 @@ def main(cfg: Config = CFG) -> None:
         step_label="[STEP 11] Uncertainty bands (spatial refits)",
     )
 
-    # Final consistency audit (uncertainty subsystem): Config.n_spatial_refits
-    # must match the refit count actually embedded in `uncertainty`, whether
-    # that object was just computed or restored from cache. Fails loudly
-    # (raises) rather than silently deleting/recomputing a stale cache entry
-    # - see audit_uncertainty_refit_consistency() docstring. Read-only; never
-    # touches NEGI values, CIs, XGBoost, spatial CV, calibration, sensitivity,
-    # or robustness logic.
     _uncertainty_audit = audit_uncertainty_refit_consistency(cfg, uncertainty)
 
     report_uncertainty_bands(uncertainty, s1, cfg, summary)
     refit_summary_df = summarize_spatial_refit_diagnostics(validation, uncertainty, s1, cfg)
 
-    # Spatial block-size sensitivity (Task 2): robustness diagnostic on
-    # whether the Scenario 2 endpoint's CI-crosses-zero conclusion depends
-    # on the spatial block-size choice. Reuses compute_uncertainty_bands
-    # unchanged; never alters cfg.n_spatial_refits or the primary block
-    # grouping (see run_spatial_block_size_sensitivity docstring for the
-    # documented spatial_block re-gridding; see Config.spatial_block_cell_size_deg).
     report_step("[STEP 11b] Spatial block-size sensitivity...")
     block_size_sensitivity_df = run_spatial_block_size_sensitivity(
         model_results, baseline, s1, s2, negi, cfg, summary,
     )
 
-    # Task 3: ONE consolidated robustness table for the two new diagnostics
-    # that have no existing home (Scenario 2 percentile sensitivity and the
-    # uncertainty convergence summary already have their own established
-    # CSVs - scenario2_percentile_sensitivity.csv and
-    # uncertainty_convergence.csv respectively - and are intentionally left
-    # there rather than duplicated here).
     robustness_summary_df = pd.concat(
         [
             joint_support_df.assign(section="joint_multivariate_support"),
@@ -15455,21 +13171,12 @@ def main(cfg: Config = CFG) -> None:
     )
     save_csv(robustness_summary_df, cfg.data_dir / "robustness_summary.csv", cfg=cfg, debug_only=True)
 
-    # Uncertainty convergence diagnostic (robustness-symmetry audit, item 3):
-    # diagnostic-only refit-count sweep, does not affect the publication
-    # uncertainty bands (`uncertainty`, above) or Config.n_spatial_refits.
     if cfg.run_uncertainty_convergence_diagnostic:
         report_step("[STEP 11c] Uncertainty convergence diagnostic (refit-count sweep)...")
         convergence_result = compute_uncertainty_convergence_diagnostic(
             model_results, baseline, s1, s2, negi, cfg, uncertainty,
             point_label="endpoint",
         )
-        # Reviewer fix: a SEPARATE convergence verdict for the Scenario 2
-        # MAXIMUM (negi.s2_optimum_idx), not a re-use of the endpoint's.
-        # Same checkpoint history, read at the maximum's own index - see
-        # compute_uncertainty_convergence_diagnostic's docstring. Any
-        # caveat attached to the MAXIMUM's reported band below must use
-        # this verdict, not the endpoint one.
         convergence_result_maximum = compute_uncertainty_convergence_diagnostic(
             model_results, baseline, s1, s2, negi, cfg, uncertainty,
             point_label="maximum",
@@ -15484,8 +13191,6 @@ def main(cfg: Config = CFG) -> None:
                 "table":              convergence_result["table"],
                 "transitions":        convergence_result["transitions"],
                 "convergence_status": convergence_result["convergence_status"],
-                # Reviewer fix: the maximum's own verdict, exported
-                # alongside (never merged into) the endpoint's.
                 "convergence_status_maximum": convergence_result_maximum["convergence_status"],
             },
             cfg.data_dir / "uncertainty_convergence.json",
@@ -15511,21 +13216,12 @@ def main(cfg: Config = CFG) -> None:
         convergence_status_for_maximum_report = None
         convergence_skip_reason_for_report = "not requested (Config.run_uncertainty_convergence_diagnostic=False)"
 
-    # Explicit consistency summary (uncertainty subsystem audit). Reaching
-    # this line already proves configured/actual refits agree - a mismatch
-    # would have raised out of audit_uncertainty_refit_consistency() above,
-    # before any of this stage's downstream work (including the convergence
-    # sweep) ran - so the summary always ends with the confirmation line.
     _convergence_criteria = print_uncertainty_consistency_summary(
         _uncertainty_audit, convergence_status_for_report, convergence_skip_reason_for_report,
         tolerance_pct=(convergence_result["tolerance_pct"] if convergence_result is not None else None),
         n_refits=(convergence_result["published_n_refits"] if convergence_result is not None else None),
         cfg=cfg,
     )
-    # Exported separately from uncertainty_summary.csv (that name is already
-    # used by the per-scenario-point uncertainty table above) so both
-    # convergence criteria - adaptive stop and publication convergence -
-    # are reproducible from disk without re-deriving them from the console.
     save_csv(
         pd.DataFrame([_convergence_criteria]),
         cfg.data_dir / "uncertainty_convergence_status.csv",
@@ -15536,10 +13232,6 @@ def main(cfg: Config = CFG) -> None:
     zero_crossing_df = compute_negi_zero_crossing_diagnostics(negi, uncertainty, support, cfg)
     report_negi_zero_crossing_diagnostics(zero_crossing_df, cfg, summary)
 
-    # Single source of truth for maximum-evaluated-NEGI diagnostics (item 10).
-    # Scenario 1 has no per-point kNN support array (see compute_support_diagnostics /
-    # compute_negi_zero_crossing_diagnostics comments), so its support-derived
-    # fields are left unavailable (None) rather than approximated.
     maximum_diagnostics_s1 = build_maximum_diagnostics(
         "Scenario 1", negi.negi_s1, negi.scenario_pct, negi.s1_optimum_idx,
         uncertainty.percentiles.get("negi_s1"), None, None, cfg,
@@ -15571,15 +13263,9 @@ def main(cfg: Config = CFG) -> None:
             f"supports_interior_optimum={d['maximum_supports_interior_optimum']}",
         )
 
-    # Joint multivariate support (Step 10b, `joint_support`) is threaded
-    # into these reporting sections by label lookup only - it is read from
-    # the dict already computed above, never recomputed here.
     classification_blocks = "\n\n".join(
         format_maximum_classification(
             d, joint_support_status=joint_support.get(d["label"], {}).get("joint_support_status"),
-            # Reviewer fix: the maximum's own convergence verdict, not the
-            # trajectory endpoint's - see compute_uncertainty_convergence_
-            # diagnostic's docstring for why these must not be conflated.
             publication_convergence_status=convergence_status_for_maximum_report,
         )
         for d in (maximum_diagnostics_s1, maximum_diagnostics_s2)
@@ -15602,30 +13288,20 @@ def main(cfg: Config = CFG) -> None:
     for d in (maximum_diagnostics_s1, maximum_diagnostics_s2):
         for line in format_maximum_headline(
             d, joint_support_status=joint_support.get(d["label"], {}).get("joint_support_status"),
-            # Reviewer fix: maximum-specific verdict (see above), not the
-            # endpoint's.
             publication_convergence_status=convergence_status_for_maximum_report,
         ):
             log_headline(line)
 
-    # Step 12: Sensitivity analysis
     report_step("[STEP 12] Sensitivity analysis...")
     sensitivity = run_sensitivity_analysis(negi, s1, cfg)
     report_sensitivity_analysis(sensitivity, cfg)
 
-    # Step 12a: cost-regime diagnostic (reporting layer over the unchanged
-    # grid above; recomputes no NEGI quantity).
     report_step("[STEP 12a] Cost-regime diagnostic...")
     cost_regime, cost_regime_by_exponent = compute_cost_regime_diagnostic(negi, sensitivity, cfg)
     cost_regime_payload = report_cost_regime_diagnostic(
         cost_regime, cost_regime_by_exponent, cfg, summary,
     )
 
-    # Step 12b: Scenario 2 percentile sensitivity (engineering addition -
-    # reporting only; does not affect the primary Scenario 2 endpoint
-    # computed above in run_scenario_trajectories()). Cached like the other
-    # spatial-refit-based stages since it repeats compute_uncertainty_bands
-    # once per swept percentile.
     report_step("[STEP 12b] Scenario 2 percentile sensitivity...")
     s2_percentile_sensitivity = run_or_cached_stage(
         cfg, "s2_percentile_sensitivity", cfg.run_s2_percentile_sensitivity,
@@ -15650,7 +13326,6 @@ def main(cfg: Config = CFG) -> None:
     )
     report_scenario2_percentile_sensitivity(s2_percentile_sensitivity, cfg, summary)
 
-    # Step 12c: decision envelope (separate ranges; never pooled).
     report_step("[STEP 12c] Decision envelope...")
     decision_envelope = report_decision_envelope(
         compute_decision_envelope(
@@ -15668,17 +13343,9 @@ def main(cfg: Config = CFG) -> None:
         f"Scenario 2 maximum {_s2_robust_word} under uncertainty and sensitivity checks."
     )
 
-    # Pre-computed diagnostics
     ndbi_sweep = compute_ndbi_response_sweep(model_results, cfg)
     surface    = compute_response_surface(model_results, cfg)
 
-    # Item 10 fix: this stratifies NDVI-LST slopes by NDBI quartile and
-    # reports a conditional-relationship figure/table (Figure 6) that
-    # readers use to interpret the model's behavior - the same
-    # holdout-independence rule applies as to the scenario-defining
-    # quantities above: the confirmatory holdout must not influence how
-    # the strata are drawn or what conditional slope is reported inside
-    # them. Uses data.df_train, not `df` (the full, just-reloaded dataset).
     ndbi_bins = build_ndbi_quantile_bins(
         data.df_train, 4, ["Low urban", "Moderate urban", "High urban", "Very high urban"]
     )
@@ -15688,56 +13355,22 @@ def main(cfg: Config = CFG) -> None:
     report_conditional_slopes_enhanced(conditional_df, cfg, summary)
     conditional_sign_summary = summarize_conditional_ndvi_slope_signs(conditional_df, summary)
 
-    # Binning-choice robustness check (does the sign pattern in Figure 6
-    # hold up under a different, equally-defensible equal-count NDBI
-    # stratification?) - see compute_ndbi_binning_robustness() docstring.
-    # Reuses the already-fitted quartile results above rather than
-    # recomputing them, and additionally fits an independent tercile
-    # stratification for comparison.
     binning_robustness = compute_ndbi_binning_robustness(
         data.df_train, cfg, summary, quartile_results=conditional_results,
     )
-    # Figure S18 (tercile robustness check plot) removed per request. The
-    # underlying computation above is kept - it still exports
-    # ndvi_conditional_slopes_binning_robustness.csv and logs the
-    # tercile-vs-quartile sign-pattern comparison to the summary - only the
-    # plot_ndvi_conditional_by_ndbi_bins() call that rendered it as a
-    # figure is gone.
 
-    # NDVI-LST sign-reversal audit: continuously-adjusted (NDVI + NDBI +
-    # Elevation + NDVI:NDBI) companion diagnostic to the binned Figure 6 /
-    # Figure S18 slopes above. Computed once on data.df_train (same
-    # holdout-independence rule as the binned diagnostics) and reused both
-    # for the summary/log report and for the caveat below, rather than
-    # refitting it twice.
     continuous_adjustment = compute_ndvi_ndbi_continuous_adjustment(data.df_train, cfg)
     continuous_adjustment_summary = report_continuous_adjustment(continuous_adjustment, cfg, summary)
     plot_ndvi_continuous_adjustment(continuous_adjustment, cfg)
 
-    # Estimator-level fix for Figure 6: continuous spline-basis varying-
-    # coefficient model (LST ~ f(NDBI) + f(Elevation) + NDVI*g(NDBI)),
-    # computed once on data.df_train (same holdout-independence rule as
-    # every other diagnostic above). This becomes the primary Figure 6
-    # (plotted at [13.5] below); the four-independent-regressions estimator
-    # is retained only for the descriptive supplementary Figure S20.
     varying_coefficient = compute_ndvi_ndbi_varying_coefficient_gam(data.df_train, cfg)
     varying_coefficient_summary = report_varying_coefficient_gam(varying_coefficient, cfg, summary)
 
-    # Automatic caveat tying together permutation importance
-    # (fi, computed at [STEP 6]) and the NDVI-NDBI correlation (corr_ndvi_ndbi,
-    # computed during EDA) with the conditional-slope analysis just above -
-    # printed here (rather than at [STEP 6]) because the conditional-slope
-    # summary it points readers to must already exist. No new computation;
-    # see log_ndvi_causal_caveat() docstring.
     log_ndvi_causal_caveat(
         fi, corr_ndvi_ndbi, cfg, summary,
         continuous_adjustment=continuous_adjustment_summary,
     )
 
-    # Item 10 fix: same stratified-diagnostic reasoning as the conditional
-    # slopes above - decile summary is reported alongside them and should
-    # not let the confirmatory holdout shift decile edges or their LST
-    # statistics.
     ndvi_decile_df = compute_ndvi_decile_summary(data.df_train)
     saturation     = compute_saturation_diagnostic(negi, s2, cfg)
 
@@ -15758,11 +13391,6 @@ def main(cfg: Config = CFG) -> None:
         "max_negi_s2_value":  negi.negi_s2[negi.s2_optimum_idx],
         "max_negi_s2_pct":    negi.scenario_pct[negi.s2_optimum_idx],
         "max_negi_s2_robust": maximum_diagnostics_s2["maximum_robust"],
-        # Reason fields (item J/M audit): the figure must not assume
-        # "non-robust" always means "CI crosses zero" - these let the plot
-        # report whichever check(s) actually failed for THIS maximum,
-        # mirroring the reason-enumeration already used in
-        # classify_endpoint_interpretation()/format_maximum_classification().
         "max_negi_s2_ci_includes_zero": maximum_diagnostics_s2["maximum_ci_includes_zero"],
         "max_negi_s2_near_boundary": (
             maximum_diagnostics_s2["maximum_near_boundary"]
@@ -15779,9 +13407,6 @@ def main(cfg: Config = CFG) -> None:
         else "OK: within training support"
     )
 
-    # Endpoint robustness assessment (engineering-refinement item 1), computed
-    # here (ahead of scenario_summary_df) so its fields can be folded into
-    # that export too - see build_endpoint_diagnostics for the full rationale.
     _endpoint_idx_pre = -1
     endpoint_diagnostics_s2 = build_endpoint_diagnostics(
         "Scenario 2", negi.negi_s2, negi.scenario_pct, _endpoint_idx_pre,
@@ -15818,12 +13443,6 @@ def main(cfg: Config = CFG) -> None:
         "feature_support_median_nn_distance":    float(np.median(support.mean_knn_dist_s2)),
         "feature_support_sparse_count":          _s2_n_sparse,
         "feature_support_sparse_fraction":       _s2_frac_sparse,
-        # Item N audit: report the number of refits actually completed
-        # (uncertainty.n_refits_used), never the configured ceiling
-        # (cfg.n_spatial_refits) - adaptive convergence can legitimately
-        # stop before the ceiling. Ceiling and convergence status are
-        # exported alongside it, explicitly labeled, so the two can never
-        # be conflated downstream.
         "spatial_refit_count":            int(uncertainty.n_refits_used),
         "spatial_refit_count_ceiling":    int(cfg.n_spatial_refits),
         "spatial_refit_converged_early":  bool(uncertainty.converged_early),
@@ -15849,9 +13468,6 @@ def main(cfg: Config = CFG) -> None:
         "s2_maximum_knn_distance":   maximum_diagnostics_s2["maximum_knn_distance"],
         "s2_maximum_robust":         maximum_diagnostics_s2["maximum_robust"],
         "s2_maximum_supports_interior_optimum": maximum_diagnostics_s2["maximum_supports_interior_optimum"],
-        # Endpoint robustness fields (engineering-refinement item 1) - same
-        # uncertainty/support/stability construction as the s2_maximum_*
-        # columns above, applied to the trajectory endpoint instead.
         "s1_endpoint_evaluated_negi":     endpoint_diagnostics_s1["endpoint_evaluated_negi"],
         "s1_endpoint_ci_includes_zero":   endpoint_diagnostics_s1["endpoint_ci_includes_zero"],
         "s1_endpoint_local_stability":    endpoint_diagnostics_s1["endpoint_local_stability"],
@@ -15869,9 +13485,6 @@ def main(cfg: Config = CFG) -> None:
     }])
     save_csv(scenario_summary_df, cfg.data_dir / "scenario_summary.csv", cfg=cfg, debug_only=True)
 
-    # ScenarioSummary.csv was a duplicate of scenario_points_df exported under
-    # a different name.  Only the canonical scenario_points export is kept;
-    # the redundant ScenarioSummary.csv has been removed (Refactor 17).
     scenario_results_s2 = compute_scenario_results(
         s2, negi.negi_s2, negi.energy_norm_sqrt, negi.desal_energy_sqrt, baseline.baseline_lst,
     )
@@ -15882,14 +13495,6 @@ def main(cfg: Config = CFG) -> None:
     scenario_points_df["Nearest Neighbor Distance"] = support.mean_knn_dist_s2
     save_csv(scenario_points_df, cfg.data_dir / "scenario2_trajectory.csv")
 
-    # scenario1_trajectory.csv (publication-readiness refactor, item 1):
-    # Scenario 1 has no per-point kNN support array (see build_maximum_diagnostics
-    # call sites elsewhere), so it gets the same per-point NDVI/NDBI/LST/NEGI
-    # columns as scenario2_trajectory.csv without the two support-derived
-    # columns. compute_scenario_results() is the SAME generic assembly
-    # function already used for Scenario 2 above - called here with s1's
-    # trajectory and negi.negi_s1 instead - so this is a pure read-out of
-    # arrays computed earlier in the pipeline, not a new calculation.
     scenario_results_s1 = compute_scenario_results(
         s1, negi.negi_s1, negi.energy_norm_sqrt, negi.desal_energy_sqrt, baseline.baseline_lst,
     )
@@ -15898,13 +13503,6 @@ def main(cfg: Config = CFG) -> None:
         scenario1_trajectory_df[f"{_feat} (fixed)"] = _val
     save_csv(scenario1_trajectory_df, cfg.data_dir / "scenario1_trajectory.csv")
 
-    # negi_results.csv (publication-readiness refactor, item 1): the single
-    # consolidated NEGI results table requested for standard-mode export -
-    # Scenario 1 and Scenario 2 trajectories stacked with a "Scenario"
-    # label column, built purely by concatenating the two DataFrames above.
-    # No value here is recomputed; this is a presentation-only reshaping of
-    # scenario1_trajectory.csv + scenario2_trajectory.csv into one file for
-    # readers who want the primary NEGI output without opening two files.
     negi_results_df = pd.concat(
         [
             scenario1_trajectory_df.assign(Scenario="Scenario 1"),
@@ -15919,25 +13517,11 @@ def main(cfg: Config = CFG) -> None:
     ]
     save_csv(negi_results_df, cfg.data_dir / "negi_results.csv")
 
-    # Scenario endpoint diagnostics (engineering-refinement item 5).
-    # These fields are a pure read-out of the LAST (100%-intervention)
-    # point of the already-computed Scenario 2 trajectory / NEGI / support
-    # / uncertainty arrays above - no new statistic is computed here, and
-    # every value below already appears (as part of a full array) in
-    # scenario_points.csv, uncertainty.table, and support.*. This export
-    # only makes the single boundary point explicit and machine-readable,
-    # for readers who want "what happens at the far end of the trajectory"
-    # without reconstructing it from the full per-point CSV.
     _endpoint_idx = -1
     _endpoint_uncertainty_lo = float(uncertainty.percentiles["negi_s2"][2.5][_endpoint_idx])
     _endpoint_uncertainty_hi = float(uncertainty.percentiles["negi_s2"][97.5][_endpoint_idx])
     _endpoint_in_support = bool(support.in_support_s2[_endpoint_idx])
 
-    # Full endpoint robustness assessment (engineering-refinement item 1):
-    # endpoint_diagnostics_s1 / endpoint_diagnostics_s2 were already computed
-    # above (ahead of scenario_summary_df) - reused verbatim here, not
-    # recomputed, so the CSV/JSON/console reports below can never drift
-    # from the values folded into scenario_summary.csv.
     endpoint_diagnostics_df = pd.DataFrame([endpoint_diagnostics_s2])
     save_csv(endpoint_diagnostics_df, cfg.data_dir / "endpoint_diagnostics.csv", cfg=cfg, debug_only=True)
 
@@ -15967,10 +13551,6 @@ def main(cfg: Config = CFG) -> None:
     ):
         log_headline(line)
 
-    # scenario_endpoint_diagnostics.json (Scenario 2): original keys are
-    # preserved verbatim for backward compatibility; the new symmetric
-    # stability/robustness fields are added alongside them, not in place
-    # of them.
     endpoint_diagnostics = {
         "endpoint_scenario_position_pct": float(s2.scenario_pct[_endpoint_idx]),
         "endpoint_ndvi":                  float(s2.ndvi[_endpoint_idx]),
@@ -15992,7 +13572,6 @@ def main(cfg: Config = CFG) -> None:
     }
     save_json(endpoint_diagnostics, cfg.data_dir / "scenario_endpoint_diagnostics.json")
 
-    # Auto-populate Conclusions in the summary log
     _imp = fi.table.set_index("Feature")["Importance"]
     _top = str(fi.table["Feature"].iloc[0])
     _others = ", ".join(
@@ -16011,10 +13590,6 @@ def main(cfg: Config = CFG) -> None:
         f"is below the model RMSE; cooling-magnitude estimates should be "
         "interpreted with caution."
     )
-    # Boundary-maximum reporting (item 22): a configurable near-boundary
-    # tolerance band, not just an exact endpoint match.  This only widens
-    # *when the warning is shown*; negi.s1_optimum_idx / s2_optimum_idx are
-    # computed identically regardless (see scenario comparative assessment above).
     s1_at_boundary = is_near_trajectory_boundary(
         negi.s1_optimum_idx, len(negi.negi_s1), cfg.scenario_boundary_tolerance_pct,
         positions=negi.scenario_pct,
@@ -16026,11 +13601,6 @@ def main(cfg: Config = CFG) -> None:
     if s1_at_boundary:
         s1_max_pct  = float(negi.scenario_pct[negi.s1_optimum_idx])
         s1_max_negi = float(negi.negi_s1[negi.s1_optimum_idx])
-        # Clarify (Section 5): the argmax at 0% intervention is mathematically
-        # valid (baseline NEGI is zero and every evaluated intervention level
-        # is less favourable), but this wording avoids implying that 0% is an
-        # identified intervention optimum. The machine-readable
-        # maximum_evaluated_negi field is unchanged.
         summary.add_conclusion(
             f"The highest evaluated NEGI for Scenario 1 occurs at the baseline "
             f"({s1_max_pct:.0f}% intervention; NEGI = {s1_max_negi:.3f}).  "
@@ -16048,7 +13618,6 @@ def main(cfg: Config = CFG) -> None:
     if s2_at_boundary:
         summary.add_warning("Scenario 2: " + interpretation_text("boundary_maximum"))
 
-    # Step 13: Generate figures
     report_step("[STEP 13] Generating figures...")
 
     log_info("  [13.1] Validation figures...")
@@ -16086,13 +13655,7 @@ def main(cfg: Config = CFG) -> None:
     plot_ndvi_decile_analysis(
         ndvi_decile_df, corr_ndvi_lst, corr_ndbi_lst, corr_ndvi_ndbi, cfg
     )
-    # Figure 6 (primary): continuous varying-coefficient g(NDBI) curve -
-    # one continuous fitted response surface, not four independent
-    # per-bin regressions. See compute_ndvi_ndbi_varying_coefficient_gam().
     plot_ndvi_adjusted_slope_curve(varying_coefficient, cfg)
-    # Figure S20 (supplementary, descriptive only): the OLD four-
-    # independent-regressions estimator/figure, unchanged, retitled and
-    # saved under its own filename so it is never confused with Figure 6.
     plot_ndvi_conditional_by_ndbi_bins(
         conditional_results, df, cfg,
         fig_filename=FIG_NDVI_UNADJUSTED_STRATUM_SUPPLEMENT,
@@ -16155,17 +13718,10 @@ def main(cfg: Config = CFG) -> None:
 
     log_info("  [13.12] Supplementary diagnostics complete.")
 
-    # Step 14: Summary log
     report_step("[STEP 14] Exporting summary log...")
     summary.log("NEGI scenario comparison", "Smoothing robust (Savgol)", str(smoothing_robust))
     summary.log("NEGI scenario comparison", "Peak location OOD",         str(peak_is_ood))
 
-    # Prediction-cache statistics are an implementation detail, not a
-    # scientific result. The stats dict is always computed (when the cache
-    # is active) so it can be exported to cache_status.json regardless of
-    # run_mode; only the console log line is routed through
-    # report_development(), so it is intentionally excluded from the
-    # publication console/summary report.
     prediction_cache_stats = PREDICTION_CACHE.stats() if PREDICTION_CACHE is not None else None
     if prediction_cache_stats is not None:
         report_development(
@@ -16177,16 +13733,6 @@ def main(cfg: Config = CFG) -> None:
 
     report_step("[STEP 14b] Running automated QA checks...")
     log_headline("\n[10] QA (engineering/data-consistency checks - see [7]-[9] above for scientific robustness)")
-    # Item Y/X audit finding: build_publication_summary() was fully
-    # implemented (see its docstring, which describes exactly this
-    # two-call pattern) but had no call site anywhere in main() - meaning
-    # publication_summary.json was never actually written, and the QA
-    # check that verifies its existence (`if publication_summary_path is
-    # not None`) was silently never added to the checks list. Reconnecting
-    # it here, per the function's own documented contract: once BEFORE
-    # run_qa_checks() so the file exists for that check, once AFTER (below,
-    # once qa_summary/runtime_seconds are available) to fold the QA result
-    # itself into the final version of the file.
     _publication_summary_path = cfg.data_dir / "publication_summary.json"
     save_json(
         build_publication_summary(
@@ -16248,11 +13794,6 @@ def main(cfg: Config = CFG) -> None:
     export_cache_status_json(cfg, prediction_cache_stats=prediction_cache_stats)
     export_runtime_summary_json(cfg, runtime_seconds=runtime_seconds)
 
-    # Authoritative (post-QA) publication_summary.json write - the pre-QA
-    # write above exists only so run_qa_checks' existence check has a file
-    # to find; this second write is the one a reader should treat as final,
-    # now including the QA result and total runtime (see
-    # build_publication_summary's docstring).
     save_json(
         build_publication_summary(
             cfg, repro_info, validation, calibration_table, resid,
@@ -16263,10 +13804,6 @@ def main(cfg: Config = CFG) -> None:
         _publication_summary_path,
     )
 
-    # Engineering-consistency QA (distinct from, and never mixed into, the
-    # scientific qa_summary.json produced by run_qa_checks() above) - run
-    # last, since it only verifies the manifest/report files written
-    # immediately above actually landed on disk as valid JSON.
     engineering_qa = run_engineering_qa_checks(cfg)
     save_json(engineering_qa, cfg.data_dir / "engineering_qa.json")
 

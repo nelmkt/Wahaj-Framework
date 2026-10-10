@@ -32,8 +32,6 @@ for r in decision:
     water_calc = n(r['pixels_mean']) * .09 * central
     eq(n(r['water_m3']), water_calc, f"water {r['option_id']}")
     eq(n(r['m3_per_degree']), water_calc/abs(n(r['cooling_C'])), f"ratio {r['option_id']}")
-    # The ratio bounds come from paired spatial draws of cooling *and* area,
-    # so they should not equal water divided by marginal cooling endpoints.
     eq(n(r['scenario_low']), n(r['m3_per_degree_low'])*n(water['low']['depth_m'])/n(water['central']['depth_m']), 'scenario low')
     eq(n(r['scenario_high']), n(r['m3_per_degree_high'])*n(water['high']['depth_m'])/n(water['central']['depth_m']), 'scenario high')
 print('decision-summary measured rows checked', sum(r['basis'].startswith('measured:') for r in decision))
@@ -72,7 +70,7 @@ for r in rows('test_region_holdouts.csv'):
 intervals_checked = 0
 for file in TABLES.glob('*.csv'):
     if file.stem.endswith('_INVALID'):
-        continue  # preserve failed exploratory output without treating it as evidence
+        continue
     rr=rows(file.name)
     if not rr: continue
     cols=rr[0].keys()
@@ -90,9 +88,6 @@ for file in TABLES.glob('*.csv'):
             intervals_checked += 1
 print('interval containments checked', intervals_checked)
 
-# Generic lo_C/hi_C naming is used for several distinct estimands. Inspect
-# these separately so an estimate outside a percentile interval is surfaced,
-# rather than silently treated as an arithmetic failure.
 simple_center = {
     'decision_bare_places_model.csv': 'cooling_C',
     'decision_by_coast.csv': 'cooling_px_C',
@@ -135,7 +130,7 @@ print('generic interval points outside bounds', simple_outside)
 for file_name in ('gee_common_month_paired.csv', 'gee_common_month_paired_v2.csv'):
     for index, row in enumerate(rows(file_name), start=2):
         if not row['new_minus_old_C']:
-            continue  # v2 suppresses sub-ten-cell / sub-five-block contrasts
+            continue
         old, new, change = map(n, (row['old_per_pixel_C'], row['new_per_pixel_C'], row['new_minus_old_C']))
         if abs((new - old) - change) > 1e-9:
             raise AssertionError(f'paired difference {file_name}:{index}')

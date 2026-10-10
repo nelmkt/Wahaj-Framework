@@ -85,7 +85,6 @@ def load_saved(cfg: Config) -> pd.DataFrame:
     for radius in RADII:
         df[f"combined_green_px_{radius}m"] = df[f"combined_green_px_{radius}m"].fillna(0)
 
-    # Independent population check from the previously saved Figure 1 table.
     controls = df.cls.eq(3) & df.setting.eq(SETTINGS[0]) & df.d_own_built.abs().lt(cfg.stable_surface_max)
     n_c = df.loc[controls, "key"].value_counts()
     matched = df.cls.eq(1) & df.setting.eq(SETTINGS[0]) & df.key.isin(n_c[n_c >= cfg.min_controls].index)
@@ -267,7 +266,6 @@ def analyze(df: pd.DataFrame, cfg: Config):
                              if label.endswith("calibrated") else np.nan,
                              weighted_southern_belt_share=float(w @ df.iloc[nix].southern_belt.to_numpy(float))
                              if label.endswith("calibrated") else np.nan))
-        # Paired difference tests whether the calibrated non-isolated slope still differs.
         diff = np.asarray(rw_reps[radius]) - np.asarray(iso_reps[radius])
         lo, hi, valid = interval(diff)
         rows.append(dict(radius_m=radius, subset="calibrated non-isolated minus isolated", n_cells=len(nix),

@@ -20,11 +20,11 @@ OUT = ROOT / "tables_revision_r1" / "r1_psf_recovery.csv"
 if OUT.exists():
     raise SystemExit(f"Refusing to overwrite {OUT}")
 
-BETA = -1.2              # true LST change of one greened 30 m pixel, K (no spillover)
-NOISE = 0.5              # cell-level noise in the LST change, K
-NC = 200                 # 200 x 200 cells of 90 m (18 km x 18 km)
-P_TREAT = 0.03           # share of cells that receive greening
-RINGS = ((0, 30), (30, 90), (90, 180), (180, 300))   # metres from the cell's own pixels
+BETA = -1.2
+NOISE = 0.5
+NC = 200
+P_TREAT = 0.03
+RINGS = ((0, 30), (30, 90), (90, 180), (180, 300))
 N_REP = 20
 
 
@@ -43,20 +43,16 @@ def one(seed, fwhm_m, patch):
         k = rng.choice(9, size=d, replace=False)
         green[3 * i + k // 3, 3 * j + k % 3] = True
         dose[i, j] = d
-    # BETA is the change of the 90 m cell mean per greened pixel (as b in Eq. (3)), so one greened pixel itself changes
-    # by 9 x BETA and the cell mean (the panel's aggregation) changes by dose x BETA without blurring
     field = 9 * BETA * green.astype(float)
     if fwhm_m:
         field = gaussian_filter(field, sigma=fwhm_m / 2.3548 / 30.0, mode="constant")
     dy = field.reshape(NC, 3, NC, 3).mean(axis=(1, 3)) + rng.normal(0, NOISE, (NC, NC))
-    # distance (m) from each pixel to the nearest greened pixel; cell distance = min over its pixels
     dist_px = distance_transform_edt(~green) * 30.0
     dmin = dist_px.reshape(NC, 3, NC, 3).min(axis=(1, 3))
     control = (~treated) & (dmin > 300)
     tau = dy[treated] - dy[control].mean()
     d = dose[treated].astype(float)
     b_own = np.sum(d * tau) / np.sum(d * d)
-    # external ring counts for each treated cell: greened pixels outside the cell by distance to the cell's pixels
     X = []
     for i, j in zip(*np.nonzero(treated)):
         r0, r1, c0, c1 = max(3 * i - 11, 0), min(3 * i + 14, npx), max(3 * j - 11, 0), min(3 * j + 14, npx)

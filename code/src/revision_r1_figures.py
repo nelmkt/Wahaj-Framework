@@ -14,7 +14,7 @@ ROOT = Path(sys.argv[1]).resolve()
 T = ROOT / "tables_revision_r1"
 OUT = ROOT / "figures_r1"
 OUT.mkdir(exist_ok=True)
-BLUE, ORANGE, AQUA = "#2a78d6", "#eb6834", "#1baf7a"     # categorical slots 1-3 of the reference palette, fixed order
+BLUE, ORANGE, AQUA = "#2a78d6", "#eb6834", "#1baf7a"
 INK, MUTED, GRID = "#0b0b0b", "#898781", "#e6e5e1"
 plt.rcParams.update({"font.family": "DejaVu Sans", "font.size": 9, "axes.edgecolor": MUTED, "axes.labelcolor": INK,
                      "xtick.color": MUTED, "ytick.color": MUTED, "axes.spines.top": False, "axes.spines.right": False})
@@ -27,7 +27,6 @@ def save(fig, name):
     print("wrote", path)
 
 
-# ---- Fig. A: mean matched contrast for each dose (primary match)
 dc = pd.read_csv(T / "r1_dose_contrasts.csv")
 si = pd.read_csv(T / "r1_slope_intercept.csv")
 fig, ax = plt.subplots(figsize=(6.2, 3.6))
@@ -49,7 +48,6 @@ ax.set_xlim(0, 9.5)
 ax.legend(frameon=False, fontsize=7.5, loc="lower left")
 save(fig, "fig_r1_dose_contrasts.png")
 
-# ---- Fig. B: NEGI on measured contrasts over alpha/beta and p
 nw = pd.read_csv(T / "r1_negi_weights.csv")
 fig, axes = plt.subplots(1, 2, figsize=(6.2, 3.0), sharey=True)
 for ax, p in zip(axes, (0.5, 1.0)):

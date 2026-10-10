@@ -24,7 +24,6 @@ def test_neighbor_bins_partition_exactly_one_pixel_classified_cells():
 
 def test_imagery_queue_is_unlabelled_and_stratified_key_is_separate():
     queue = read("imagery_review_queue_v7.csv")
-    # The blinded key is deliberately not opened by the v8 checks.
     assert (ROOT / "tables/imagery_sampling_key_v7.csv").is_file()
     assert len(queue) == 200
     assert len({r["sample_id"] for r in queue}) == 200

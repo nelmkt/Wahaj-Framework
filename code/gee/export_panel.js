@@ -1,7 +1,3 @@
-// The cell panel for the framework, as run in the Earth Engine Code Editor: the same recipe as code/gee/export_panel.py.
-// Paste into the Code Editor and press Run: it exports panel.csv to your Google Drive (Tasks tab → Run). Put it in code\gee\ next
-// to code\gee\panel_meta.json (scene counts, reference evapotranspiration), which only the Python exporter writes.
-// Every constant matches the Python exporter; see its docstring for what each group and band means.
 var G = (function () {
   var YEARS = [2014, 2015, 2018, 2019, 2024, 2025], MONTHS = [5, 6, 7, 8, 9];
   var RECT = [39.0, 21.2, 39.4, 21.8], CELL_M = 90, CONTROL_FRACTION = 0.10;

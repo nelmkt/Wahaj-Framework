@@ -91,7 +91,6 @@ class Model:
         Xtr = features(self.train, cfg)
         self.fit = _xgb(cfg, cfg.seed).fit(Xtr, self.train["lst_post"].to_numpy(float))
         self.support = Support(Xtr, cfg)
-        # Same full-panel draws as matching; validation reweights treated cells and controls too.
         from fw_matching import Bootstrap
         self.bootstrap = Bootstrap(df["block"], cfg.n_refits, cfg.seed)
         self.panel_index = df.index.copy()

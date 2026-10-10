@@ -47,14 +47,12 @@ a.set_aspect(1 / np.cos(np.radians(df.lat.mean())))
 a.set_xlabel("longitude (°E)")
 a.set_ylabel("latitude (°N)")
 a.set_title("a  Cell classes (90 m cells)", loc="left", fontsize=10)
-# scale bar: 10 km along the parallel at 21.24° N
 km_per_deg = 111.32 * np.cos(np.radians(21.24))
 sx, sy, L = 39.02, 21.235, 10 / km_per_deg
 a.plot([sx, sx + L], [sy, sy], c=INK, lw=2.2)
 for xx in (sx, sx + L):
     a.plot([xx, xx], [sy - 0.006, sy + 0.006], c=INK, lw=1)
 a.text(sx + L / 2, sy + 0.012, "10 km", ha="center", va="bottom", fontsize=8, color=INK)
-# north arrow
 a.annotate("N", xy=(39.05, 21.79), xytext=(39.05, 21.72), ha="center", va="center", fontsize=9, color=INK,
            arrowprops=dict(arrowstyle="-|>", color=INK, lw=1.2))
 a.legend(loc="upper center", bbox_to_anchor=(0.5, -0.12), ncol=1, markerscale=4, fontsize=7, handletextpad=0.3, frameon=False)

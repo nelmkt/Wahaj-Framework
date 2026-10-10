@@ -24,8 +24,8 @@ import pandas as pd
 YEARS = (2014, 2015, 2018, 2019, 2024, 2025)
 MONTHS = (5, 6, 7, 8, 9)
 RECT = [39.0, 21.2, 39.4, 21.8]
-K1, K2 = 774.8853, 1321.0789          # Landsat 8 band 10 (also in each scene's metadata)
-E_VEG, NDVI_S, NDVI_V = 0.99, 0.2, 0.86     # Ermida et al. (2020), Landsat_SMW_LST modules compute_FVC.js and compute_emissivity.js
+K1, K2 = 774.8853, 1321.0789
+E_VEG, NDVI_S, NDVI_V = 0.99, 0.2, 0.86
 
 
 def main():

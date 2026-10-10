@@ -228,7 +228,7 @@ def ratio_table(df, cfg):
             matched = treated & matching.control_weights(df, treated, controls, key, cfg).gt(0)
             n = int(matched.sum())
             if n < 10:
-                continue  # The old figure withheld these classes as well.
+                continue
             basis = f"measured: {'9' if label == '9/9' else label} of 9 pixels greened"
             row = saved[(saved.setting == setting) & (saved.basis == basis)]
             if len(row) != 1:

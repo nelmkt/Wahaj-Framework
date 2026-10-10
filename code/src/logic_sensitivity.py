@@ -63,7 +63,6 @@ def estimate_rows(df, cfg, boot, nearest):
                                  per_pixel_hi_C=slope["hi_C"], cell_C=cell["estimate_C"],
                                  cell_lo_C=cell["lo_C"], cell_hi_C=cell["hi_C"],
                                  n_boot_valid=slope["n_boot_valid"]))
-                # Delete both treated and comparison cells in each treated block, then rematch.
                 block_values = sorted(df.loc[matched_class, "block"].unique())
                 delete_values = []
                 for block in block_values:
@@ -93,7 +92,6 @@ def estimate_rows(df, cfg, boot, nearest):
                                       leverage_equivalent_blocks=leverage_equivalent if label == "all" else np.nan,
                                       largest_block_dose_squared_share=float(shares.max()) if label == "all" else np.nan,
                                       note="exploratory cluster jackknife; unequal blocks and rematching limit interval interpretation"))
-            # This screen is deliberately labelled a proxy, not an isolated-pixel test.
             small = T & df.n_greened_px.between(1, 2)
             full = matching.att(df, small, C, "d_lst", key, cfg, boot,
                                 dose="n_greened_px", keep_reps=True)
@@ -130,7 +128,7 @@ def sio_integrity(cfg):
     low, high = float(water.depth_m.min()), float(water.depth_m.max())
     out["inside_assumed_depth_band"] = out.depth_m.between(low, high)
     out["duplicate_branch_year_in_aggregated_file"] = out.duplicated(["year", "branch"], keep=False)
-    out["source_join_verified"] = False  # The two original workbooks are not bundled.
+    out["source_join_verified"] = False
     return out
 
 

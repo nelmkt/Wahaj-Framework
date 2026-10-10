@@ -13,13 +13,12 @@ def test_union_counts_a_pixel_in_range_of_multiple_own_pixels_once():
     own_cell = (0, 0)
     own = [(0, 0), (1, 0), (2, 0)]
     pixels = {point: own_cell for point in own}
-    pixels.update({(3, 0): (1, 0),   # within 90 m of all three own points
-                   (8, 0): (2, 0),   # within 180 m of the third own point
-                   (12, 0): (3, 0),  # exactly 300 m from the third own point
-                   (13, 0): (4, 0)}) # beyond 300 m
+    pixels.update({(3, 0): (1, 0),
+                   (8, 0): (2, 0),
+                   (12, 0): (3, 0),
+                   (13, 0): (4, 0)})
     offsets = offsets_for_radii((30, 0, 0, 0, -30, 0))
     assert unique_external_counts(own, own_cell, pixels, offsets) == {90: 1, 180: 2, 300: 3}
-    # The three own greened pixels are not external, despite lying in all radii.
     assert 3 + unique_external_counts(own, own_cell, pixels, offsets)[90] == 4
 
 

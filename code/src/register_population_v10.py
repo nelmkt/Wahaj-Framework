@@ -33,7 +33,6 @@ def main():
     if (key.population != "unopened blinded key" or
             key.interpretation != "Filename inventoried only; contents not inspected"):
         raise SystemExit("Blinded-key handling differs from the original")
-    # Only filenames and existing inventory metadata are read. The key file is never opened.
     filenames = {p.name for p in TABLES.glob("*.csv")} | {OUT.name}
     if filenames - set(latest.table) != {OUT.name}:
         raise SystemExit("A current table lacks existing population metadata")

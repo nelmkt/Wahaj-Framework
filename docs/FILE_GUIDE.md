@@ -407,3 +407,9 @@ Descriptions of scripts are the first sentence of each script's own docstring. D
 | `r1_ndvi_thresholds.csv` | release 2.3.0 |
 | `r1_rerun_comparison.csv` | release 2.3.0 |
 | `fig_r1_cell_classes.png` (figures_r1) | Fig. 1, release 2.3.0 |
+
+## manuscript/
+
+| File | Purpose |
+| --- | --- |
+| `MANUSCRIPT_V8_FOLLOWUP2.md`, `…3.md`, `…4.md`, `…6.md`, `SUPPLEMENT_RELATIVE_SPREAD_V8_FOLLOWUP3.md` | superseded v8 drafts read by four text checks; not the paper (see `manuscript/README.md`) |

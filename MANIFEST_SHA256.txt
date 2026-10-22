@@ -8,9 +8,9 @@
 #   006e4be174ef9c0953a40da392d2ea0e90ed8b375a96cd30b163d96ca48b4bb6    10749459  code/gee/panel_thr_nv015_g025_r1.csv
 #   038eb8bf00a4a5e8591c303c59dac0cf58790daefc4a8f21196725591d42e09d     8796400  code/gee/panel_thr_nv015_g035_r1.csv
 67c6b85d614805e5e3f13720af3649ccf1f23803f2dee0566f411dafe3e4e3f3        1062  .zenodo.json
-b434e36b3a52e9c1778d88194af9b6925fab7478a47981a954cec487dd248d7c        6187  CHANGELOG.md
+4d631c1ad7122382b18e59f2c6389953d1970a93646ee15833e92ec7bbeb55f6        6359  CHANGELOG.md
 ffc69f72d486d3e4547ef4350bfc134b7ab52d12c0a357f7baaea5af21d11742        1526  CITATION.cff
-b5a13eb9a4184cabe5e7ed340870e9c163bf58c6d66c9a1f1e69523fe9d9a5bb       18502  README.md
+c34b15bc5acece62a673bf4a50c3028efd21bce69da77b6072bd0d034377c2fa       18654  README.md
 2843a65f880c7f7a383c851e28b65d8bb81f10a1f7fa3f2ce83f7e0f4a21209e       31112  REPRODUCE.md
 c82453f123e3a5b1d6841d3330cadf5f4aa74ab077320de8c4c5c9bb8036d78e     2058355  code/gee/Jeddah_landcover.csv
 3913e535c59486993f2ab536484cab5ed8446d5fbfad5a64a5c7e8706cac2367      811728  code/gee/Jeddah_points_for_gee.csv
@@ -161,7 +161,7 @@ c3a9d70602f977c77b30d17b4b635448ba45dfcd0ada40ba2238002bf7ee0657        3956  co
 3477b7598afe338073e5612291c12f6ca324d480f3bbca2f931f28fe3eff9b8e        7004  code/src/write_subring_results_v8_followup7.py
 d9a5205daca35a7e43d0e38fb7907807210eb2a19911446ed4f1682e97bbcd36        2135  code/src/write_subring_results_v8_followup8.py
 a5987e4cf6b211e808f2bb62eedca91399730a1e9d210ca2d5f7c74da0e59cc1        4217  docs/DATA.md
-e3cf79f6725cf6b6726f54917d0e9c4bcc7e4bd4184b8db0a3998f9abce2ad75       36080  docs/FILE_GUIDE.md
+c19779db6ab123122cf9b622eaf94a83d494acfbbc2d1d0896248dabffdbd541       36334  docs/FILE_GUIDE.md
 e1978fdb464fdb15b9c4d20f6a6bc2d55efb858a1d6b2b30ac5a54dced3cdef3        3300  docs/HEADLINE_EVIDENCE.md
 82cb14b46a4af6bf44e9b819f0e011d70831f3c01411dc9e988593fb7a145804        1671  docs/LEVERAGE_SENSITIVITY.md
 1c1f70a1ad4f507162a2565c6aa7e844dbf60bad6cbfe5140daa004a717ba2af        5584  docs/MATH_CHECK_V11.md
@@ -185,6 +185,12 @@ b4f149cb39d43218ee57335f53fce103babc332609ee8f7d4074b143802372b7      198498  fi
 1ecc2ab63266b4e359c667ba558ed48f9a76ac1f9ceb7d2a901dff201c27eff0      972639  figures_r1/fig_r1_cell_classes.png
 a91bb67f6fad4600e760a4a89fbd8a16a542cc583af181abb4c3ea2363e2ebea      127440  figures_r1/fig_r1_dose_contrasts.png
 e88e223dc4a4fee0d4cbf2d04f99c4eec8538dabdc76a11f483be0ab27716fff      109504  figures_r1/fig_r1_negi_weights.png
+b7556292701dc602eb0e6e31b86df83eefdc9b7410f8d3239bd55cc69d0eabc8       15094  manuscript/MANUSCRIPT_V8_FOLLOWUP2.md
+5b24e726fc7b642c17a588a12bf3b202479a0b06424a6c866e4bad3de6ed0d53       15990  manuscript/MANUSCRIPT_V8_FOLLOWUP3.md
+a1e9d89972f1553982b58b91989a0f304a5772fe584580ce4bf4bc66177e15ed       17917  manuscript/MANUSCRIPT_V8_FOLLOWUP4.md
+1d2972f09f0f82ee9308b5726ed46d6d37ba5d1cd7bdebaa37c23ecefba744c1       20409  manuscript/MANUSCRIPT_V8_FOLLOWUP6.md
+e9429831a8a7934c7e27bd0e9983f87e11070108178d598f456cfdba1ee4f6f1         486  manuscript/README.md
+7f5ddca0eedf5d315bc62d5b401f384ad90cdf5b43c2e0d2f5cd39c6a7a1d9fc         910  manuscript/SUPPLEMENT_RELATIVE_SPREAD_V8_FOLLOWUP3.md
 e341eafb8178a3e80770dc07fc652f351170fc1fd0665fdc16eef485264db4b5         892  requirements.txt
 c80b1bee3f1336a3fe7d73d651f7e0653e67b322d0f6e5a25e0c5c2966f978eb       19080  tables/SHA256SUMS.txt
 00ae27c5a50c9fbd195957677f43ef475e3bad55911bb6dbec7bba09cd33a56d       21606  tables/SHA256SUMS_v8.txt

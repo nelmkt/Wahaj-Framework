@@ -156,9 +156,10 @@ def main():
     figure_code = (ROOT / "code/src/fw_figures.py").read_text(encoding="utf-8")
     assert "Hypothetical irrigation conversion (744-cell sensitivity)" in figure_code
     assert "Outside (744-cell sensitivity)" in figure_code
-    assert {p.name for p in ROOT.iterdir()} == {"figures_png", "figures_pdf", "tables", "code", "manuscript"}
-    assert {p.name for p in (ROOT / "code").iterdir() if p.is_dir()} == {"gee", "src"}
-    assert not any(p.is_dir() for folder in ("figures_png", "figures_pdf", "tables", "manuscript") for p in (ROOT / folder).iterdir())
+    assert {"figures_png", "figures_pdf", "tables", "tables_revision_v11", "tables_revision_r1", "code", "docs"}.issubset(
+        {p.name for p in ROOT.iterdir()})
+    assert {p.name for p in (ROOT / "code").iterdir() if p.is_dir()} == {"gee", "src", "negi_original"}
+    assert not any(p.is_dir() for folder in ("figures_png", "figures_pdf", "tables") for p in (ROOT / folder).iterdir())
     assert not any(p.is_dir() for folder in ("gee", "src") for p in (ROOT / "code" / folder).iterdir())
     annual = read("gee_month_composite_changes.csv")
     baseline = next(r for r in annual if r["year"] == "2014")

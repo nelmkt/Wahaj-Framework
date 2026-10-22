@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased verification update — 13 October 2026
+
+- Re-ran the public repository suite: 58 passed, 4 skipped because versioned manuscript drafts are not published; the claims audit passed.
+- Updated blinded-key tests to verify its intentional absence while retaining the unlabelled queue and filename inventory.
+- Corrected the full-rerun comparison to align SIO observations by unique branch-year key. The earlier large difference was a positional row-order artifact, not a changed value.
+- Re-ran the full framework from the compressed panel on 13 October 2026: all 30 saved pipeline tables agree exactly after the key alignment.
+- Added a prospective intervention validation plan, a cited comparison with existing workflows, a headline evidence map, a spatial leverage sensitivity note and an explanation of the closed scenario gate. None claims the current model is ready for site selection.
+
 ## 2.3.1 (5 October 2026), release `v2.3.1`
 
 - Archived on Zenodo: release v2.3.1, DOI [10.5281/zenodo.23168530](https://doi.org/10.5281/zenodo.23168530); all versions [10.5281/zenodo.23168529](https://doi.org/10.5281/zenodo.23168529).

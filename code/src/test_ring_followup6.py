@@ -40,6 +40,8 @@ class RingFollowup6Tests(unittest.TestCase):
         self.assertAlmostEqual(float(r.reduced_beta_C_per_pixel) -
                                float(r.full_beta_C_per_pixel),
                                float(r.reduced_minus_full_C_per_pixel))
+        if not TARGET.exists():
+            self.skipTest("Versioned draft manuscript is not in the public release")
         text = TARGET.read_text(encoding="utf-8")
         self.assertIn("specification sensitive", text)
         self.assertIn("interval excludes zero", text)

@@ -8,10 +8,10 @@
 #   006e4be174ef9c0953a40da392d2ea0e90ed8b375a96cd30b163d96ca48b4bb6    10749459  code/gee/panel_thr_nv015_g025_r1.csv
 #   038eb8bf00a4a5e8591c303c59dac0cf58790daefc4a8f21196725591d42e09d     8796400  code/gee/panel_thr_nv015_g035_r1.csv
 67c6b85d614805e5e3f13720af3649ccf1f23803f2dee0566f411dafe3e4e3f3        1062  .zenodo.json
-343627449a539d56f59369b0fe699068e1e9c0e73439077bb633f9968d067982        4659  CHANGELOG.md
+b7b91d414fa829182aff93d9e634efb74705c49865b6683e2f63cb2c2a85dd5a        5561  CHANGELOG.md
 ffc69f72d486d3e4547ef4350bfc134b7ab52d12c0a357f7baaea5af21d11742        1526  CITATION.cff
-194ecdca0c19c3ff42833ddabf2760115420a0c14b08531523aa198bbf0127f3       17939  README.md
-0640c7e78af1a6deee01aa060dc2dd509983a8425b8c60568bec67dc399ee4a5       30789  REPRODUCE.md
+b5a13eb9a4184cabe5e7ed340870e9c163bf58c6d66c9a1f1e69523fe9d9a5bb       18502  README.md
+9a0a937fb2fb69f85f1cd0385b9e6666b79738a3b287cea176fb2d86e0666e29       31013  REPRODUCE.md
 c82453f123e3a5b1d6841d3330cadf5f4aa74ab077320de8c4c5c9bb8036d78e     2058355  code/gee/Jeddah_landcover.csv
 3913e535c59486993f2ab536484cab5ed8446d5fbfad5a64a5c7e8706cac2367      811728  code/gee/Jeddah_points_for_gee.csv
 55536969d97caa2f923690130850bcbc96019ca70e9554fd3db6e07a7100c95c        1443  code/gee/attach_landcover.js
@@ -69,7 +69,7 @@ b8fcb312555f2f6857847578effd764021c30b7adbfc2c88feab3fb64db72a74        6419  co
 ed06a7fd4d14cc2f4388963ed6aa37f70fc04907b95e82b7c706a5ead82e99b0        7654  code/src/analyze_ring_reduced_v8_followup6.py
 9024aaed0c3f968bfd063faa435e6c39bf8d04efee95d111a71923f157b7a6a5        8185  code/src/analyze_ring_robustness_v8_followup4.py
 c43a5067cfc6b8d2a3662b172b6e3d9468d52364c6f44cb2e64986d1e4d2d3eb        3944  code/src/analyze_subring_contrasts_v8_followup7.py
-dabe9c2ddad97e621f01c1d88d317c05c9612bcec73da852bf26a1cee7bdf856       18280  code/src/audit_claims.py
+6c03c689fa1ac71bd46abdc24ae70b2a9c19ecfb7c0f54cc94f47e53e4a39b31       18340  code/src/audit_claims.py
 d16f7a376f680fd82659a18f7f0cbd92a7bdc6263add6a049c50f75379033873        3760  code/src/benchmark_models_v11.py
 d66cdf40187ee312f7ecedf5fd31ecd195a678fb395e294b8397ca8370f8747e        2525  code/src/check_common_month_composition.py
 b93aadb3ba52b2ebc9588b418241b6b3df93af5e0d0ee90db38a35582c243f58        1588  code/src/check_control_selection.py
@@ -127,7 +127,7 @@ f15bb46f19e301a4ccd6694fe762c4f004e072b0930c816aa23a7edf42dd19d9        2826  co
 619229e3466f0aa6a8b49af23253fc9e6ae8ce56e7e73a2b11120dab603cfde7        2407  code/src/revision_r1_ndvi_thresholds.py
 9f46e5c718f65f55b72ef2cb0a5761120650fe0788bf2777b365f2b3c89c141c        3850  code/src/revision_r1_psf_recovery.py
 40208a0d2731b5bd79b42e636d9b6a197e09041723e550f0e6fe2295ff8e3208        2502  code/src/revision_r1_reretrieved_contrasts.py
-bb2c410c10d01b850977cd87c9d13f1d2cbf1cbd74271c88f6dc9443d5e98469        2154  code/src/revision_r1_rerun_compare.py
+a8b7dcd1cddace41e60d7e64da2653573029bec34685fe17250140a5439c13df        2669  code/src/revision_r1_rerun_compare.py
 b16ce7de1402edcc05addc362433ea8cdff18f98b3e82d5da611407199bfb90e         908  code/src/revision_r1_scene_counts.py
 3c581cbcf242f5edc7be7001bbec6943d9f247bcba528553e37b50703e6519ef        2394  code/src/run_contrast_checks.py
 ec95d28a7200d7051a1ba9c854b39bbefde16d1f003cfa35176a75956e3dd675        4409  code/src/run_followup.py
@@ -138,19 +138,19 @@ ec95d28a7200d7051a1ba9c854b39bbefde16d1f003cfa35176a75956e3dd675        4409  co
 d757b48e6d41424214e01b686c277c002fd34541a9b5d327b0b8c9754d9bd89c        4143  code/src/synthetic_panel.py
 186c3b837347a3a1cda5e6c92a953515b62476a6e3f7f8e8ed8ecb0be666dcd2        1340  code/src/test_combined_exposure_v8.py
 5b5edf68a1cf47c4e0884f34fe79debf7c8b99d834f24aa5d64b13cd94accdf1        4003  code/src/test_core.py
-b8d6bd0fc8eb9e08e1ac3b16e94361f625dcbd5a46005821211d4be206d27e1c        2770  code/src/test_exposure_rings_v8_followup3.py
+4df6834141dbf8a4b135c044b09b65a87cd575ed2e81a39b9117caca7610c246        2914  code/src/test_exposure_rings_v8_followup3.py
 fe72c546737a2d28ae68dec7e9ce8e3090971c144696f21b1faf78d2e8a0e553        2847  code/src/test_external_pixel_counts_v8.py
 88f3cfacfd12f5caca0d57fda73e99baad407342a803b8a1c83d8cc9f7499665        2000  code/src/test_followup.py
 b81193139e02a6a20c2575ed7c124f051eafb417e0c52880e867b43e301998e4        2317  code/src/test_followup_v6.py
-87c422210b9ff44812478cda233660b5c35db5a32c4191c78705c3df86783a5d        1737  code/src/test_followup_v7.py
+08868cd4f7c7742caa257c0930111a49e719f86f60f3078c7f83514384ba0ae3        1812  code/src/test_followup_v7.py
 a6f5fab1a83545c0c356567d7608eb40977e4aca7ab22c4ff30ef9e0ca41b2dd        4642  code/src/test_framework.py
 3317f2f3039e47b3c741a4e199cf88e8605754ecc68c8c376e219007dae140e6        1850  code/src/test_isolation_reweighting_v8.py
-0eee7437c61a08b0815ef1e51487bf86cd567f6b76792e9c7a668c88736b0939        2392  code/src/test_joint_exposure_v8_followup2.py
+f7dc9b08b866bb709c1cc7991cb63537a74c7b212f87cb502b5591feb7b5f532        2517  code/src/test_joint_exposure_v8_followup2.py
 0c141a9d57847b289722a02efa87540eba8d8f88de705edcfe6d0246efe70099        4370  code/src/test_pixel_subring_observed_v8_followup8.py
-acc3a132f86a4ab28386421f91dd13524b6fdc441d460e2ff6bd140b46fdc9b5        2219  code/src/test_ring_followup6.py
+2d1c814531242cfd2a68211616ab53c7f6ae3f8b54ab639dfb0562b353e95502        2336  code/src/test_ring_followup6.py
 1f88b4003dc43cbc96a05864f639422040e4706d3cb082f7d3ada433cd8773f5        2637  code/src/test_ring_reduced_v8_followup5.py
-b4849c2b52029cab205c994716930ccd76c4db43de90adeced90f9b1f92c06f5        2187  code/src/test_ring_robustness_v8_followup4.py
-583b1465b5859d8fae89a512d6d8ccb5360ec9f1632b1d767ac56bf887735ff5        6331  code/src/test_v8.py
+24bb3b24b05b931e7295336680a005578e2249895525ce4bc1f9e99ffe01031d        2304  code/src/test_ring_robustness_v8_followup4.py
+1f807bdf45ef56df9fd50d2c3955a37733abb90dffdc68a18178621c704dca26        6380  code/src/test_v8.py
 c3a9d70602f977c77b30d17b4b635448ba45dfcd0ada40ba2238002bf7ee0657        3956  code/src/tradeoff_illustration_v11.py
 040c3cb1dd4dff5528c6966551337b7c6b20319231fb9c2fe9e2d6a3fadf86ee       10607  code/src/write_exposure_manuscript_v8_followup3.py
 252bcf015fbe71df0035a8a5f35764138a44289f9f271a6897fc5750b678ec75        8544  code/src/write_final_wording_v8_followup9.py
@@ -161,10 +161,15 @@ c3a9d70602f977c77b30d17b4b635448ba45dfcd0ada40ba2238002bf7ee0657        3956  co
 d9a5205daca35a7e43d0e38fb7907807210eb2a19911446ed4f1682e97bbcd36        2135  code/src/write_subring_results_v8_followup8.py
 a5987e4cf6b211e808f2bb62eedca91399730a1e9d210ca2d5f7c74da0e59cc1        4217  docs/DATA.md
 0d7ac2f841f8807d1bc6c731e779c4c258b39cf28b87c9529a0cbc1f6413c634       35793  docs/FILE_GUIDE.md
+e1978fdb464fdb15b9c4d20f6a6bc2d55efb858a1d6b2b30ac5a54dced3cdef3        3300  docs/HEADLINE_EVIDENCE.md
+82cb14b46a4af6bf44e9b819f0e011d70831f3c01411dc9e988593fb7a145804        1671  docs/LEVERAGE_SENSITIVITY.md
 1c1f70a1ad4f507162a2565c6aa7e844dbf60bad6cbfe5140daa004a717ba2af        5584  docs/MATH_CHECK_V11.md
 0c4a5283aa21a9709fd12c4b0aec8fb5621ab085cde137e701e0bd37a0857063       10914  docs/NEGI_LOGIC_AUDIT_V11.md
 52f57787489e9eab795a5c9a366b21ccf9813572764f4ebb611d69c65a66d29b       10210  docs/PORTABILITY_AUDIT_V11.md
 ebfb0392b4e8aa54904a90f5d6b630a28fd8ee04009b62dde54c4c49019a37e3        1371  docs/REVISION_R1.md
+76af207abbf4aa7a9cba85f49bca71f8caf76e2d32dc2037f7d49125f2533e17        1768  docs/SCENARIO_GATE.md
+b3be776435ce57cca0c92dedeb489944bd112b85185250fbe46ae2372e4c5e0e        4061  docs/VALIDATION_PLAN.md
+644c04d8233ced79c5aa93aeb62c57656f7a0bc426b25b92dd307b9476014883        2758  docs/WORKFLOW_COMPARISON.md
 6b4c687728132dfe3e1c571ff86a62846f967bd6dc21b3249c230ec53ded0cee       72641  docs/Wahaj_Manuscript_numeric_audit.md
 fb03e4ab144692efd038db516ae52ec0a717f1fcc3ba1529df4076bab1a1de16      462763  figures_pdf/fig1_sample.pdf
 82e13c7473cfcb8c44c0518735290772d775cfe7bd6c8a31f651c40ec588c39f       39959  figures_pdf/fig2_cooling.pdf
@@ -317,7 +322,7 @@ f618ec98203adb9ea10ace798e513c351c9e9f3af0bcc00c04d2e92da0744877         572  ta
 ce607061ad6101480908fddb10a7e73b63dfb2b47293876b24a1cf291f370950        1182  tables_revision_r1/r1_populations.csv
 8207715fe8fee3134cbd5dafd4c8eeaeab182fc08af7f99327bff21b13d9bb55        2800  tables_revision_r1/r1_psf_recovery.csv
 5c38a5566e98ae6b13318ea83c4b4fc98fa61ec92d780836ad2cab1e4182085a        2208  tables_revision_r1/r1_reretrieved_contrasts.csv
-e50c2e2424fbc528bcd1aa88d4e22c941ca93e96703475aa37a22b990d453788        1703  tables_revision_r1/r1_rerun_comparison.csv
+d445e5abd15ef144e1310aa2349e8c64dfbfab6bf80c0456433c4392b600588f        1683  tables_revision_r1/r1_rerun_comparison.csv
 2e532ca143a3cfc69971a8ca07d8a5938813df7b5856692d7b7e246bbb690fd7         166  tables_revision_r1/r1_scene_counts.csv
 b498880c0b622c7fd7572936df2a9a2b03d4286089dd058ffe064278f4a1e634         721  tables_revision_r1/r1_slope_intercept.csv
 a64943a7cd84681e7c957b7000a0ead06186a0e1cd12850be571d26648c285ea        4442  tables_revision_r1/r1_variogram.csv

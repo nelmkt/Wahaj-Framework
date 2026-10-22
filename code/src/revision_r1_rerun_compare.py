@@ -19,6 +19,14 @@ for new in sorted((RUN / "tables").glob("*.csv")):
     r = {"table": new.name, "saved_exists": old.exists()}
     if old.exists():
         a, b = pd.read_csv(old), pd.read_csv(new)
+        # The SIO branch-year table is a set of observations. Its export order
+        # changed after the source-workbook join was reviewed; align the same
+        # branch-years before testing values, and reject duplicate keys.
+        if new.name == "sio_supply_depths.csv":
+            keys = ["year", "branch"]
+            assert not a.duplicated(keys).any() and not b.duplicated(keys).any()
+            a = a.sort_values(keys).reset_index(drop=True)
+            b = b.sort_values(keys).reset_index(drop=True)
         r.update(rows_saved=len(a), rows_rerun=len(b), same_columns=list(a.columns) == list(b.columns))
         if r["same_columns"] and len(a) == len(b):
             num = [c for c in a.columns if pd.api.types.is_numeric_dtype(a[c]) and pd.api.types.is_numeric_dtype(b[c])

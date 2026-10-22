@@ -220,7 +220,7 @@ set PYTHONDONTWRITEBYTECODE=1
 python -m pytest code/src -p no:cacheprovider
 ```
 
-The author reports 62 tests passing on the full package (2026-10-02). In this release `tables/imagery_sampling_key_v7.csv` is withheld, so two tests are expected to fail here (see README.md).
+The public release was checked on 13 October 2026: 58 tests passed and 4 tests of unpublished manuscript drafts were skipped; the claims audit passed. The blinded `tables/imagery_sampling_key_v7.csv` is withheld by design. On systems with a restricted default temp directory, add `--basetemp PATH_TO_WRITABLE_TEMP` to the pytest command. The author's earlier full-package run had 62 passing tests on 2 October 2026.
 
 ## Tables added in release 2.1.0
 

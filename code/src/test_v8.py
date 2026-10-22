@@ -102,8 +102,9 @@ def test_population_inventory_covers_all_tables_without_reading_blinded_key():
     with patch("builtins.open", guard_open), patch.object(Path, "open", guard_path_open):
         rows = table(current)
         names = {p.name for p in (ROOT / "tables").glob("*.csv")}
-        assert set(rows.table) == names
-        assert len(rows) == len(names)
+        assert not key.exists()
+        assert set(rows.table) == names | {key.name}
+        assert len(rows) == len(names) + 1
         assert rows.table.is_unique
         assert rows.loc[rows.table.eq("imagery_sampling_key_v7.csv"), "population"].item() == "unopened blinded key"
         assert rows.loc[rows.table.eq("imagery_sampling_key_v7.csv"), "interpretation"].item() == "Filename inventoried only; contents not inspected"

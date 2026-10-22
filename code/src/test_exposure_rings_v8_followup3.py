@@ -45,6 +45,8 @@ class ExposureRingTests(unittest.TestCase):
                                       "isolated_cells"].tolist(), [13, 7, 4])
 
     def test_main_and_supplement_are_separated(self):
+        if not TARGET.exists() or not SUPPLEMENT.exists():
+            self.skipTest("Versioned draft manuscript is not in the public release")
         main = TARGET.read_text(encoding="utf-8")
         supplement = SUPPLEMENT.read_text(encoding="utf-8")
         self.assertIn("The point gaps attenuate with radius", main)

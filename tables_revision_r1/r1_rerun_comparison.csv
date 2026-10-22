@@ -19,7 +19,7 @@ measured_sensitivity.csv,True,18,18,True,0.0,0.0,0,True
 measured_yearly.csv,True,12,12,True,0.0,0.0,0,True
 model_cv.csv,True,1,1,True,0.0,0.0,0,True
 model_importance.csv,True,7,7,True,0.0,0.0,0,True
-sio_supply_depths.csv,True,17,17,True,48198769.0,1000000000000.0,0,False
+sio_supply_depths.csv,True,17,17,True,0.0,0.0,0,True
 test_by_coast.csv,True,5,5,True,0.0,0.0,0,True
 test_by_dose.csv,True,14,14,True,0.0,0.0,0,True
 test_by_setting.csv,True,4,4,True,0.0,0.0,0,True

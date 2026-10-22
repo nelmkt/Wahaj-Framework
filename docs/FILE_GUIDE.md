@@ -146,7 +146,6 @@ Descriptions of scripts are the first sentence of each script's own docstring. D
 | `revision_r1_psf_recovery.py` | Synthetic landscape blurred by a 150 m point-spread function; recovery of a known effect. |
 | `revision_r1_figures.py` | The two revision figures. |
 | `revision_r1_scene_counts.py` | Scenes per summer month from `code/gee/panel_meta.json`. |
-| `revision_r2_ledger_primary.py` | Water–energy ledger on the primary match, same central arithmetic as `fw_decision.py`; checks that it reproduces `decision_summary.csv`. |
 | `revision_r1_reretrieved_contrasts.py` | Primary match repeated with re-retrieved LST (after the Earth Engine export). |
 
 | `revision_r1_gate3_reretrieved.py` | Gates 2 and 3 on the primary match with re-retrieved LST. |
@@ -392,7 +391,6 @@ Descriptions of scripts are the first sentence of each script's own docstring. D
 | `r1_populations.csv` | see `docs/REVISION_R1.md` |
 | `r1_psf_recovery.csv` | see `docs/REVISION_R1.md` |
 | `r1_scene_counts.csv` | see `docs/REVISION_R1.md` |
-| `r2_ledger_primary.csv` | ledger per degree of measured cooling, primary match (paper Table 7, Table S45) |
 | `r1_slope_intercept.csv` | see `docs/REVISION_R1.md` |
 | `r1_variogram.csv` | see `docs/REVISION_R1.md` |
 

@@ -38,6 +38,8 @@ class RingRobustnessTests(unittest.TestCase):
         self.assertTrue((pair.external_three_rank == 3).all())
 
     def test_manuscript_keeps_distance_limit_and_tension(self):
+        if not TARGET.exists():
+            self.skipTest("Versioned draft manuscript is not in the public release")
         text = TARGET.read_text(encoding="utf-8")
         self.assertIn("Neither supports a claim of zero association beyond 90 m", text)
         self.assertIn("no unique counts at 30 or 60 m", text)

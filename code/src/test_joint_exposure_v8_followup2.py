@@ -39,6 +39,8 @@ class JointExposureFollowupTests(unittest.TestCase):
         self.assertTrue(np.isnan(relative_spread(np.array([-1., 1.]))))
 
     def test_versioned_manuscript_does_not_claim_contamination_is_identified(self):
+        if not OUT_MANUSCRIPT.exists():
+            self.skipTest("Versioned draft manuscript is not in the public release")
         text = OUT_MANUSCRIPT.read_text(encoding="utf-8")
         self.assertIn("does not distinguish neighbour contamination", text)
         self.assertIn("gap persisted at 90 and 180 m", text)

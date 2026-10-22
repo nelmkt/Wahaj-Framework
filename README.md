@@ -96,7 +96,7 @@ docs/
   SCENARIO_GATE.md                  why change predictions and scenarios are withheld
 ```
 
-To find a script or table, start with [`docs/FILE_GUIDE.md`](docs/FILE_GUIDE.md). The paper itself is not in this repository.
+To find a script or table, start with [`docs/FILE_GUIDE.md`](docs/FILE_GUIDE.md). The paper itself is not in this repository; `manuscript/` holds only five superseded v8 drafts that the tests read.
 
 ## What the code contains
 
@@ -156,7 +156,7 @@ $env:PYTHONDONTWRITEBYTECODE = "1"
 python -m pytest code/src -p no:cacheprovider
 ```
 
-On 13 October 2026 the public repository suite completed with **58 passed and 4 skipped**, and `code/src/audit_claims.py` passed. The four skipped checks read versioned manuscript drafts that are not part of this public release. Tests for the blinded imagery key now verify that it is withheld while its unlabelled review queue and filename inventory remain present. The author's earlier full-package run had 62 passing tests on 2 October 2026; it tested those unpublished drafts too. Run pytest with a writable `--basetemp` if your system temporary directory is restricted.
+On 22 October 2026 the public repository suite completed with **62 passed, 0 skipped**, and `code/src/audit_claims.py` passed. Four of the checks read superseded v8 manuscript drafts, which are now published in [`manuscript/`](manuscript/README.md) for that purpose only; without them those four checks skip. Tests for the blinded imagery key now verify that it is withheld while its unlabelled review queue and filename inventory remain present. The author's earlier full-package run had 62 passing tests on 2 October 2026; it tested those unpublished drafts too. Run pytest with a writable `--basetemp` if your system temporary directory is restricted.
 
 No test result by itself establishes parallel trends, irrigation identity, interval coverage or a physical cooling mechanism.
 

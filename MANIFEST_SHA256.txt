@@ -8,10 +8,10 @@
 #   006e4be174ef9c0953a40da392d2ea0e90ed8b375a96cd30b163d96ca48b4bb6    10749459  code/gee/panel_thr_nv015_g025_r1.csv
 #   038eb8bf00a4a5e8591c303c59dac0cf58790daefc4a8f21196725591d42e09d     8796400  code/gee/panel_thr_nv015_g035_r1.csv
 67c6b85d614805e5e3f13720af3649ccf1f23803f2dee0566f411dafe3e4e3f3        1062  .zenodo.json
-b7b91d414fa829182aff93d9e634efb74705c49865b6683e2f63cb2c2a85dd5a        5561  CHANGELOG.md
+b434e36b3a52e9c1778d88194af9b6925fab7478a47981a954cec487dd248d7c        6187  CHANGELOG.md
 ffc69f72d486d3e4547ef4350bfc134b7ab52d12c0a357f7baaea5af21d11742        1526  CITATION.cff
 b5a13eb9a4184cabe5e7ed340870e9c163bf58c6d66c9a1f1e69523fe9d9a5bb       18502  README.md
-9a0a937fb2fb69f85f1cd0385b9e6666b79738a3b287cea176fb2d86e0666e29       31013  REPRODUCE.md
+2843a65f880c7f7a383c851e28b65d8bb81f10a1f7fa3f2ce83f7e0f4a21209e       31112  REPRODUCE.md
 c82453f123e3a5b1d6841d3330cadf5f4aa74ab077320de8c4c5c9bb8036d78e     2058355  code/gee/Jeddah_landcover.csv
 3913e535c59486993f2ab536484cab5ed8446d5fbfad5a64a5c7e8706cac2367      811728  code/gee/Jeddah_points_for_gee.csv
 55536969d97caa2f923690130850bcbc96019ca70e9554fd3db6e07a7100c95c        1443  code/gee/attach_landcover.js
@@ -129,6 +129,7 @@ f15bb46f19e301a4ccd6694fe762c4f004e072b0930c816aa23a7edf42dd19d9        2826  co
 40208a0d2731b5bd79b42e636d9b6a197e09041723e550f0e6fe2295ff8e3208        2502  code/src/revision_r1_reretrieved_contrasts.py
 a8b7dcd1cddace41e60d7e64da2653573029bec34685fe17250140a5439c13df        2669  code/src/revision_r1_rerun_compare.py
 b16ce7de1402edcc05addc362433ea8cdff18f98b3e82d5da611407199bfb90e         908  code/src/revision_r1_scene_counts.py
+ab922875af0249c510af790b9e2938e84ac65dfddebbf651a28d8a641dedc84d        3584  code/src/revision_r2_ledger_primary.py
 3c581cbcf242f5edc7be7001bbec6943d9f247bcba528553e37b50703e6519ef        2394  code/src/run_contrast_checks.py
 ec95d28a7200d7051a1ba9c854b39bbefde16d1f003cfa35176a75956e3dd675        4409  code/src/run_followup.py
 4836a716b7934c17b5e79fe712ef85fc1f7bf9d2351bedc57914752fcffbbbad        2253  code/src/run_framework.py
@@ -160,7 +161,7 @@ c3a9d70602f977c77b30d17b4b635448ba45dfcd0ada40ba2238002bf7ee0657        3956  co
 3477b7598afe338073e5612291c12f6ca324d480f3bbca2f931f28fe3eff9b8e        7004  code/src/write_subring_results_v8_followup7.py
 d9a5205daca35a7e43d0e38fb7907807210eb2a19911446ed4f1682e97bbcd36        2135  code/src/write_subring_results_v8_followup8.py
 a5987e4cf6b211e808f2bb62eedca91399730a1e9d210ca2d5f7c74da0e59cc1        4217  docs/DATA.md
-0d7ac2f841f8807d1bc6c731e779c4c258b39cf28b87c9529a0cbc1f6413c634       35793  docs/FILE_GUIDE.md
+e3cf79f6725cf6b6726f54917d0e9c4bcc7e4bd4184b8db0a3998f9abce2ad75       36080  docs/FILE_GUIDE.md
 e1978fdb464fdb15b9c4d20f6a6bc2d55efb858a1d6b2b30ac5a54dced3cdef3        3300  docs/HEADLINE_EVIDENCE.md
 82cb14b46a4af6bf44e9b819f0e011d70831f3c01411dc9e988593fb7a145804        1671  docs/LEVERAGE_SENSITIVITY.md
 1c1f70a1ad4f507162a2565c6aa7e844dbf60bad6cbfe5140daa004a717ba2af        5584  docs/MATH_CHECK_V11.md
@@ -326,6 +327,7 @@ d445e5abd15ef144e1310aa2349e8c64dfbfab6bf80c0456433c4392b600588f        1683  ta
 2e532ca143a3cfc69971a8ca07d8a5938813df7b5856692d7b7e246bbb690fd7         166  tables_revision_r1/r1_scene_counts.csv
 b498880c0b622c7fd7572936df2a9a2b03d4286089dd058ffe064278f4a1e634         721  tables_revision_r1/r1_slope_intercept.csv
 a64943a7cd84681e7c957b7000a0ead06186a0e1cd12850be571d26648c285ea        4442  tables_revision_r1/r1_variogram.csv
+75645aaaae13ddebf94da965407fd50459cd229a9bdc40b0467c2a7a5d6f55df        2236  tables_revision_r1/r2_ledger_primary.csv
 6d38e34e54d0aaff45871b4abf9908aaa295267b2507dd467705282e70ecc67d        1525  tables_revision_v11/leverage_share_check_v11.csv
 e092f3f89f8b11ace49a7bb6c7142b99b984f0602e2e0d84e1ec6445b54c3f38         908  tables_revision_v11/model_benchmark_v11.csv
 00c46b4d52c529fd5712cfe43282d714ee888e7213fcff86ec6a8fbf7ff6a613        5543  tables_revision_v11/own_only_vs_joint_identity_v11.csv

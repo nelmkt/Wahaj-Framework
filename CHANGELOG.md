@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased — 22 October 2026
+
+- `code/src/revision_r2_ledger_primary.py` and `tables_revision_r1/r2_ledger_primary.csv`: the water–energy ledger on the primary match, so that the ledger and the NEGI illustration use one population. Same central arithmetic as `fw_decision.py` (checked against `decision_summary.csv`); ranges use the cooling interval with the greened area held at its mean. Central values: 781–1,524 m³ and 2.5–5.0 MWh (SWRO) per degree of measured cooling. The concurrent-change ledger in `tables/decision_*.csv` is unchanged and kept as a sensitivity. No existing code, table or figure changed.
+
 ## Unreleased verification update — 13 October 2026
 
 - Re-ran the public repository suite: 58 passed, 4 skipped because versioned manuscript drafts are not published; the claims audit passed.

@@ -239,6 +239,7 @@ Both scripts refuse to overwrite an existing table; work in a copy or remove the
 | `tables_revision_r1/r1_gate3_primary.csv` | `python code/src/revision_r1_gate3.py .` (about 20 minutes) |
 | `tables_revision_r1/r1_psf_recovery.csv` | `python code/src/revision_r1_psf_recovery.py .` |
 | `tables_revision_r1/r1_scene_counts.csv` | `python code/src/revision_r1_scene_counts.py .` |
+| `tables_revision_r1/r2_ledger_primary.csv` | `python code/src/revision_r2_ledger_primary.py .` |
 | `figures_r1/` | `python code/src/revision_r1_figures.py .` |
 
 `revision_r1_analyses.py` creates `tables_revision_r1/` and stops if it exists; work in a copy. It stops unless its full-model cross-validation reproduces `tables/model_cv.csv`. The LST re-retrieval needs an Earth Engine account: `python code/gee/gee_r1_lst_reretrieval.py --project YOUR-PROJECT`, then `python code/src/revision_r1_reretrieved_contrasts.py .`

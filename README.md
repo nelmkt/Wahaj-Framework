@@ -16,6 +16,8 @@ Code, saved Earth Engine exports, figures and result tables for the paper
 
 Wahaj is the framework described in the paper. It asks whether an XGBoost model that predicts land surface temperature (LST) can also predict the *change* associated with greening. It compares model diagnostics with matched satellite contrasts, then illustrates the water and energy implied by assumed irrigation. **Jeddah is the only city analysed.** This is neither a measured irrigation ledger nor a validated model for selecting a new greening site.
 
+**Interactive demo:** [nelmkt.github.io/Wahaj-Framework/demo](https://nelmkt.github.io/Wahaj-Framework/demo/) ([source](docs/demo/index.html)). Click a greened cell to see the measured cooling, the model test result and the assumed water and energy for that class. Every value is read from the tables in this repository.
+
 ## Contents
 
 - [Results and their populations](#results-and-their-populations)

@@ -4,6 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Wahaj Demo</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#0f4c5c">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Wahaj">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;800&family=IBM+Plex+Sans:wght@400;500;600&family=Noto+Sans+KR:wght@400;500;700&display=swap">
 <style>
 /* Layout: deep-teal masthead with language toggle, three headline findings, then the paper-style map beside the gate readout. One light look, chosen for a bright exhibition hall. */
@@ -269,6 +275,7 @@ document.getElementById("dose").onchange=e=>{S.dose=e.target.value;S.step=0;rend
 document.getElementById("tol").oninput=e=>{S.tol=+e.target.value;S.step=0;render()};
 render();
 if(document.fonts&&document.fonts.ready)document.fonts.ready.then(draw);
+if("serviceWorker" in navigator&&location.protocol==="https:"){try{navigator.serviceWorker.register("sw.js")}catch(e){}}
 </script>
 
 </body>

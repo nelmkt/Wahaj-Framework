@@ -72,6 +72,12 @@ select:hover{border-color:var(--brand)}
 .vrow{display:flex;align-items:center;gap:10px}
 .vi{flex:none;width:30px;height:30px;border-radius:50%;background:currentColor;display:inline-flex;align-items:center;justify-content:center}
 .vi svg{width:18px;height:18px}
+.act{margin:10px 0 0;padding-top:9px;border-top:1px solid rgba(19,32,30,.12);font-size:14.5px;color:var(--ink)}
+.act b{font-weight:700}
+.gsum{margin:0;display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:14.5px;color:var(--grey)}
+.gsum .gc{display:inline-flex;align-items:center;gap:6px;font-weight:600;padding:4px 10px;border-radius:999px;border:1px solid currentColor;background:var(--panel)}
+.gsum .gc.pass{color:var(--pass);background:var(--pass-bg)}.gsum .gc.fail{color:var(--fail);background:var(--fail-bg)}.gsum .gc.wait{color:var(--wait);background:var(--wait-bg)}
+.gsum .gc b{font-family:var(--display);font-weight:800}
 .verdict .k{font-size:14px;color:var(--grey)}
 .verdict .v{font-family:var(--display);font-weight:800;font-size:28px;line-height:1.15}
 .verdict p{margin:4px 0 0;font-size:15px;color:var(--ink)}
@@ -118,6 +124,8 @@ footer a{color:var(--brand)}
     <button type="button" data-step="3" data-t="t3"></button>
   </div>
 
+  <p class="gsum" id="gSum" aria-live="polite"></p>
+
   <div class="cols">
     <figure class="card">
       <canvas id="map" width="880" height="980" role="img" aria-label="Map of Jeddah's greened cells"></canvas>
@@ -138,6 +146,7 @@ footer a{color:var(--brand)}
         <div class="k" data-t="gate"></div>
         <div class="vrow"><span class="vi" id="vIcon" aria-hidden="true"></span><div class="v" id="stTitle"></div></div>
         <p id="stWhy"></p>
+        <p class="act" id="stAct"></p>
       </div>
 
       <table>
@@ -168,12 +177,14 @@ en:{tag:"Satellite evidence before city greening decisions",
  tour:"Try these three:",t1:"1. Big cooling, model withheld",t2:"2. Model passes",t3:"3. Stricter tolerance",
  cap:"Greened 90 m cells, 2014-15 to 2024-25 (n = 1,333). Colour: pixels greened out of 9. Ringed cells belong to the selected class.",
  lSet:"Setting",out:"Outside the built-up area",bu:"Built-up surroundings",lDose:"Pixels greened (of 9)",lTol:"Tolerance",
- gate:"Test gate (stage 4)",pass:"Within tolerance",fail:"Not demonstrated",wait:"Insufficient evidence",
- wFew:o=>`Only ${o.n} matched cell${o.n===1?"":"s"} in this class. The model is not used.`,
- wSup:o=>`${o.sup} of ${o.n} cells are inside the model's support; the test needs at least 10 cells in 5 areas. The model is not used here, only the measured cooling.`,
+ gate:"Test gate (stage 4)",pass:"Within tolerance",fail:"Not demonstrated",wait:"Insufficient evidence",waitT:"Model blocked",
+ wFew:o=>`Only ${o.n} matched cell${o.n===1?"":"s"} in this class, too few to measure or test reliably. Wahaj makes no claim here.`,
+ wSup:o=>`${o.sup===0?"None of the "+o.n+" cells resemble":"Only "+o.sup+" of "+o.n+" cells resemble"} the data the model learned from (the test needs 10 cells in 5 areas). Wahaj blocks the model here instead of letting it guess.`,
  wRef:"Too few valid model refits to test.",
  wPass:(a,b,t)=>`Model error ${a} to ${b} °C falls inside ±${t} °C, so the model may be used for this class.`,
- wFail:(a,b,t)=>`Model error ${a} to ${b} °C goes outside ±${t} °C, so the model is not used.`,
+ actL:"Next step:",aPass:"use the model to compare sites of this type, alongside the measured cooling.",aFail:c=>`rely on the measured cooling${c?" ("+c+" °C)":""}. Retest only if a wider tolerance can be justified in advance.`,aWait:c=>`rely on the measured cooling${c?" ("+c+" °C)":""}. Field data from comparable sites would let the model be tested.`,aFew:"collect more greened sites of this type before deciding.",
+ sumL:t=>`Gate at ±${t} °C across all 8 site classes:`,sP:"released",sF:"not demonstrated",sW:"blocked, no comparable data",
+ wFail:(a,b,t)=>`Model error ${a} to ${b} °C goes outside ±${t} °C. Wahaj does not use the model for this class; the measured cooling stands.`,
  rCool:"Measured cooling",rCoolS:"Greened cell minus matched never-green controls, 95% spatial interval",
  rModel:"Model prediction",rModelS:"XGBoost Model B, trained away from greening",
  rSup:"Cells inside model support",rSupS:"Model has comparable training data",
@@ -189,12 +200,14 @@ ko:{tag:"위성 데이터로 검증하는 도시 녹지 의사결정",
  tour:"둘러보기:",t1:"1. 큰 냉각, 모델 보류",t2:"2. 모델 통과",t3:"3. 더 엄격한 기준",
  cap:"녹화된 90 m 셀, 2014-15년에서 2024-25년까지 (n = 1,333). 색상: 9개 픽셀 중 녹화된 수. 테두리가 있는 셀이 선택한 유형입니다.",
  lSet:"지역 유형",out:"시가지 외곽",bu:"시가지 주변",lDose:"녹화 픽셀 수 (9개 중)",lTol:"허용 오차",
- gate:"검증 게이트 (4단계)",pass:"허용 오차 이내",fail:"입증되지 않음",wait:"근거 부족",
- wFew:o=>`이 유형의 대조 셀이 ${o.n}개뿐입니다. 모델을 사용하지 않습니다.`,
- wSup:o=>`${o.n}개 셀 중 ${o.sup}개만 모델 지원 범위 안에 있습니다. 검증에는 5개 구역, 10개 이상의 셀이 필요합니다. 여기서는 모델 대신 측정된 냉각 효과만 사용합니다.`,
+ gate:"검증 게이트 (4단계)",pass:"허용 오차 이내",fail:"입증되지 않음",wait:"근거 부족",waitT:"모델 차단",
+ wFew:o=>`이 유형의 대조 셀이 ${o.n}개뿐이라 신뢰할 수 있는 측정과 검증이 어렵습니다. 와하지는 여기서 결론을 내리지 않습니다.`,
+ wSup:o=>`${o.sup===0?o.n+"개 셀 중 모델이 학습한 데이터와 비슷한 셀이 없습니다":o.n+"개 셀 중 "+o.sup+"개만 모델이 학습한 데이터와 비슷합니다"}(검증에는 5개 구역, 10개 이상의 셀 필요). 와하지는 모델이 추측하지 않도록 여기서 차단합니다.`,
  wRef:"검증에 필요한 모델 재학습 횟수가 부족합니다.",
  wPass:(a,b,t)=>`모델 오차 ${a} ~ ${b} °C가 ±${t} °C 안에 있으므로 이 유형에 모델을 사용할 수 있습니다.`,
- wFail:(a,b,t)=>`모델 오차 ${a} ~ ${b} °C가 ±${t} °C를 벗어나므로 모델을 사용하지 않습니다.`,
+ actL:"다음 단계:",aPass:"측정된 냉각 효과와 함께 이 유형의 부지를 비교하는 데 모델을 사용하세요.",aFail:c=>`측정된 냉각 효과${c?"("+c+" °C)":""}를 기준으로 판단하세요. 더 넓은 허용 오차가 사전에 정당화될 때만 다시 검증합니다.`,aWait:c=>`측정된 냉각 효과${c?"("+c+" °C)":""}를 기준으로 판단하세요. 유사한 지역의 현장 자료가 있으면 모델을 검증할 수 있습니다.`,aFew:"결정하기 전에 이 유형의 녹화 지역을 더 확보하세요.",
+ sumL:t=>`±${t} °C 기준, 8개 지역 유형 전체의 게이트 결과:`,sP:"모델 사용",sF:"입증되지 않음",sW:"차단, 비교 데이터 부족",
+ wFail:(a,b,t)=>`모델 오차 ${a} ~ ${b} °C가 ±${t} °C를 벗어납니다. 이 유형에는 모델을 사용하지 않으며, 측정된 냉각 효과가 기준이 됩니다.`,
  rCool:"측정된 냉각 효과",rCoolS:"녹화 셀과 비녹화 대조 셀의 차이, 95% 공간 신뢰구간",
  rModel:"모델 예측",rModelS:"XGBoost 모델 B, 녹화 지역과 떨어진 셀로 학습",
  rSup:"모델 지원 범위 내 셀",rSupS:"모델이 유사한 학습 데이터를 가진 셀",
@@ -205,7 +218,7 @@ ko:{tag:"위성 데이터로 검증하는 도시 녹지 의사결정",
  note:"허용 오차는 결과를 보기 전에 정해야 합니다. 제다 연구에서는 사전에 정하지 않았으므로 모델 기반 시나리오를 공개하지 않았습니다. 물과 에너지 수치는 계량 기록이 아닌 가정된 관개량에 따른 것입니다. 지표면 온도는 기온과 다릅니다.",
  who:"넬리 F. 알막툼, 킹압둘아지즈대학교, 사우디아라비아",data:"자료: Landsat 8, 와하지 결과 표",code:"GitHub의 코드와 데이터",na:"해당 없음",sea:"홍해",leg:"녹화 픽셀",l1:"9개 중 1-2",l4:"9개 중 9"}};
 const doseOf=p=>p<=2?"1-2":p<=4?"3-4":p<=8?"5-8":"9";
-const S={set:"out",dose:"1-2",tol:1,lang:"en",step:0};
+const S={set:"bu",dose:"1-2",tol:1,lang:"en",step:2};
 try{if((location.hash||"").toLowerCase()==="#ko"||(navigator.language||"").startsWith("ko"))S.lang="ko"}catch(e){}
 const L=()=>T[S.lang];
 const col=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
@@ -239,13 +252,16 @@ cv.addEventListener("click",e=>{const r=cv.getBoundingClientRect(),mx=(e.clientX
   let best=null,bd=1200;for(const[a,b,p,s]of MAP.pts){const q=P(a,b),d=(q[0]-mx)**2+(q[1]-my)**2;if(d<bd){bd=d;best=[p,s]}}
   if(best){S.set=best[1]?"bu":"out";S.dose=doseOf(best[0]);S.step=0;render()}});
 const fm=(x,d=2)=>(x>0?"+":x<0?"−":"")+Math.abs(x).toFixed(d);
-function gate(o){const t=L();
-  if(!o||o.n<10)return["wait",t.wFew(o||{n:0})];
-  if(o.sup<10||!o.sBlocks||o.sBlocks<5)return["wait",t.wSup(o)];
-  if(o.sRefits<200)return["wait",t.wRef];
+function gate(o){const t=L(),c=o&&o.cool!=null?fm(o.cool,1):"";
+  if(!o||o.n<10)return["wait",t.wFew(o||{n:0}),t.aFew];
+  if(o.sup<10||!o.sBlocks||o.sBlocks<5)return["wait",t.wSup(o),t.aWait(c)];
+  if(o.sRefits<200)return["wait",t.wRef,t.aWait(c)];
   const ok=o.sGapLo>=-S.tol&&o.sGapHi<=S.tol,a=[fm(o.sGapLo),fm(o.sGapHi),S.tol.toFixed(2)];
-  return ok?["pass",t.wPass(...a)]:["fail",t.wFail(...a)];
+  return ok?["pass",t.wPass(...a),t.aPass]:["fail",t.wFail(...a),t.aFail(c)];
 }
+function summary(){const t=L(),n={pass:0,fail:0,wait:0};Object.keys(R).forEach(key=>{n[gate(R[key])[0]]++});
+  const ic={pass:"✓",fail:"✕",wait:"!"},lab={pass:t.sP,fail:t.sF,wait:t.sW};
+  document.getElementById("gSum").innerHTML=`<span>${t.sumL(S.tol.toFixed(2))}</span>`+["pass","fail","wait"].map(k=>`<span class="gc ${k}">${ic[k]} <b>${n[k]}</b> ${lab[k]}</span>`).join("");}
 function chart(o){
   const W=480,x=v=>34+(v+3)/11*(W-54);let s="";
   s+=`<rect x="${x(-S.tol)}" y="10" width="${x(S.tol)-x(-S.tol)}" height="30" fill="${col("--brand-soft")}"/>`;
@@ -264,8 +280,8 @@ function render(){
   document.querySelectorAll(".tour button").forEach(b=>{const m=b.textContent.match(/^(\d)\.\s*(.*)$/);if(m)b.innerHTML="<i>"+m[1]+"</i>"+m[2]});document.querySelectorAll(".tour button").forEach(b=>b.setAttribute("aria-pressed",String(+b.dataset.step===S.step)));
   document.getElementById("set").value=S.set;document.getElementById("dose").value=S.dose;document.getElementById("tol").value=S.tol;
   document.getElementById("tolOut").textContent="±"+S.tol.toFixed(2)+" °C";
-  const o=R[S.set+"|"+S.dose],[k,w]=gate(o);
-  document.getElementById("verdict").className="verdict "+k;const VI={pass:"<path d=\"M5 12.5l4.2 4.2L19 7\"/>",fail:"<path d=\"M7 7l10 10M17 7L7 17\"/>",wait:"<path d=\"M12 7v6\"/><circle cx=\"12\" cy=\"17\" r=\"0.6\"/>"};document.getElementById("vIcon").innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round">'+VI[k]+"</svg>";document.getElementById("stTitle").textContent=t[k];document.getElementById("stWhy").textContent=w;
+  const o=R[S.set+"|"+S.dose],[k,w,act]=gate(o);document.getElementById("stAct").innerHTML="<b>"+t.actL+"</b> "+act;summary();
+  document.getElementById("verdict").className="verdict "+k;const VI={pass:"<path d=\"M5 12.5l4.2 4.2L19 7\"/>",fail:"<path d=\"M7 7l10 10M17 7L7 17\"/>",wait:"<path d=\"M12 7v6\"/><circle cx=\"12\" cy=\"17\" r=\"0.6\"/>"};document.getElementById("vIcon").innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round">'+VI[k]+"</svg>";document.getElementById("stTitle").textContent=k==="wait"?t.waitT:t[k];document.querySelector("#verdict .k").textContent=k==="wait"?t.gate+": "+t.wait.toLowerCase():t.gate;document.getElementById("stWhy").textContent=w;
   const has=o&&o.cool!=null,nf=n=>n.toLocaleString("en");
   document.getElementById("vCool").textContent=has?`${fm(o.cool)} °C (${fm(o.coolLo)} ~ ${fm(o.coolHi)})`:t.few;
   document.getElementById("vModel").textContent=o&&o.modelB!=null?`${fm(o.modelB)} °C`:t.na;

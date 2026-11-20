@@ -1,6 +1,6 @@
 <div align="center">
 
-# Wahaj &nbsp;وهاج
+# Wahaj&nbsp;وهاج
 
 **Satellite evidence before city greening decisions**
 

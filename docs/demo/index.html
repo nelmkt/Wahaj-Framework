@@ -26,17 +26,18 @@
 *{box-sizing:border-box}
 html,body{background:var(--bg)}
 body{word-break:keep-all;overflow-wrap:anywhere;color:var(--ink);font-family:var(--font);font-size:16px;line-height:1.45;margin:0}
-.band{background:var(--brand);color:var(--brand-ink)}
+.band{background:var(--brand);color:var(--brand-ink);box-shadow:inset 0 -4px 0 var(--gold)}
 .inner{max-width:1160px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
-.mast{display:flex;flex-wrap:wrap;gap:12px 24px;align-items:center;justify-content:space-between;padding-block:18px}
+.mast{display:flex;flex-wrap:wrap;gap:12px 24px;align-items:center;justify-content:space-between;padding-block:20px 24px}
 h1{font-family:var(--display);font-weight:800;font-size:clamp(30px,4.2vw,44px);margin:0;line-height:1;letter-spacing:-.01em}
 h1 small{font-size:.5em;font-weight:600;opacity:.85;margin-left:.4em}
 .tag{margin:6px 0 0;font-size:17px;opacity:.92}
 .right{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
 .patent{font-size:14px;opacity:.9;white-space:nowrap}
-.lang{display:inline-flex;border:1px solid rgba(255,255,255,.7)}
+.lang{display:inline-flex;border:1px solid rgba(255,255,255,.7);border-radius:8px;overflow:hidden}
 .lang button{font:inherit;font-size:15px;font-weight:600;padding:8px 16px;border:0;background:transparent;color:var(--brand-ink);cursor:pointer}
 .lang button[aria-pressed="true"]{background:var(--brand-ink);color:var(--brand)}
+.lang button:not([aria-pressed="true"]):hover{background:rgba(255,255,255,.12)}
 button:focus-visible,select:focus-visible,input:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
 main.inner{padding-block:20px 36px;display:flex;flex-direction:column;gap:18px}
 .intro{margin:0;max-width:78ch;color:var(--grey)}
@@ -46,30 +47,38 @@ main.inner{padding-block:20px 36px;display:flex;flex-direction:column;gap:18px}
 @media (max-width:720px){.fact+.fact{padding-left:0;border-left:0;border-top:1px solid var(--rule)}}
 .fact b{display:block;font-family:var(--display);font-weight:800;font-size:28px;color:var(--ink);font-variant-numeric:tabular-nums;line-height:1.15}
 .fact span{font-size:14px;color:var(--grey)}
+.fact:nth-child(1) b{color:var(--g3)}.fact:nth-child(2) b{color:var(--fail)}.fact:nth-child(3) b{color:var(--brand)}
 .tour{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .tour strong{font-size:15px;margin-right:4px}
-.tour button{font:inherit;font-size:14.5px;font-weight:500;border:1px solid var(--ink);color:var(--ink);background:var(--panel);border-radius:2px;padding:7px 12px;cursor:pointer}
-.tour button[aria-pressed="true"]{background:var(--brand);color:var(--brand-ink)}
+.tour button{font:inherit;font-size:14.5px;font-weight:500;border:1px solid var(--rule);color:var(--ink);background:var(--panel);border-radius:8px;padding:6px 14px 6px 6px;cursor:pointer;display:inline-flex;align-items:center;gap:8px;box-shadow:0 1px 2px rgba(19,32,30,.06);transition:background .15s,border-color .15s}
+.tour button i{font-style:normal;font-family:var(--display);font-weight:800;font-size:13px;width:24px;height:24px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;background:var(--brand-soft);color:var(--brand)}
+.tour button:hover{border-color:var(--brand);background:#f7fbfc}
+.tour button[aria-pressed="true"]{background:var(--brand);border-color:var(--brand);color:var(--brand-ink)}
+.tour button[aria-pressed="true"] i{background:var(--gold);color:#fff}
 .cols{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);gap:18px;align-items:start}
 @media (max-width:880px){.cols{grid-template-columns:1fr}}
-.card{background:var(--panel);border:1px solid var(--rule);padding:16px;min-width:0}
+.card{background:var(--panel);border:1px solid var(--rule);border-radius:10px;padding:16px;min-width:0;box-shadow:0 1px 2px rgba(19,32,30,.05),0 6px 18px rgba(19,32,30,.05)}
 figure{margin:0}
 canvas{width:100%;height:auto;display:block;cursor:pointer;touch-action:manipulation}
 figcaption{font-size:14px;color:var(--grey);margin-top:6px}
 .ctl{display:grid;grid-template-columns:auto minmax(0,1fr);gap:10px 12px;align-items:center}
 .ctl label{font-weight:600;font-size:15px}
-select{font:inherit;font-size:15px;width:100%;padding:7px 8px;border:1px solid var(--rule);border-radius:2px;background:var(--panel);color:var(--ink)}
+select{font:inherit;font-size:15px;width:100%;padding:8px 10px;border:1px solid var(--rule);border-radius:6px;background:var(--panel);color:var(--ink);cursor:pointer}
+select:hover{border-color:var(--brand)}
 .tolrow{display:flex;gap:10px;align-items:center}
 .tolrow input{flex:1;min-width:0;accent-color:var(--brand)}
 .tolrow output{font-variant-numeric:tabular-nums;font-weight:600;white-space:nowrap}
-.verdict{padding:12px 16px;margin:16px 0 6px;border-left:5px solid currentColor}
+.verdict{padding:12px 16px;margin:16px 0 6px;border-left:5px solid currentColor;border-radius:0 8px 8px 0}
+.vrow{display:flex;align-items:center;gap:10px}
+.vi{flex:none;width:30px;height:30px;border-radius:50%;background:currentColor;display:inline-flex;align-items:center;justify-content:center}
+.vi svg{width:18px;height:18px}
 .verdict .k{font-size:14px;color:var(--grey)}
 .verdict .v{font-family:var(--display);font-weight:800;font-size:28px;line-height:1.15}
 .verdict p{margin:4px 0 0;font-size:15px;color:var(--ink)}
 .pass{color:var(--pass);background:var(--pass-bg)} .fail{color:var(--fail);background:var(--fail-bg)} .wait{color:var(--wait);background:var(--wait-bg)}
 table{width:100%;border-collapse:collapse;font-size:15px}
 td{padding:9px 0;border-bottom:1px solid var(--rule);vertical-align:top}
-td:last-child{text-align:right;font-variant-numeric:tabular-nums;font-weight:600;padding-left:12px;white-space:nowrap}
+td:last-child{text-align:right;font-variant-numeric:tabular-nums;font-weight:600;padding-left:12px;white-space:nowrap;color:var(--brand)}
 td small{display:block;color:var(--grey);font-size:13px;font-weight:400}
 @media (max-width:480px){td:last-child{white-space:normal}}
 h2{font-size:15px;font-weight:600;margin:16px 0 4px}
@@ -127,7 +136,7 @@ footer a{color:var(--brand)}
 
       <div class="verdict" id="verdict">
         <div class="k" data-t="gate"></div>
-        <div class="v" id="stTitle"></div>
+        <div class="vrow"><span class="vi" id="vIcon" aria-hidden="true"></span><div class="v" id="stTitle"></div></div>
         <p id="stWhy"></p>
       </div>
 
@@ -252,11 +261,11 @@ function render(){
   const t=L();document.documentElement.lang=S.lang;
   document.querySelectorAll("[data-t]").forEach(el=>{el.textContent=t[el.dataset.t]});
   document.getElementById("btnEn").setAttribute("aria-pressed",S.lang==="en");document.getElementById("btnKo").setAttribute("aria-pressed",S.lang==="ko");
-  document.querySelectorAll(".tour button").forEach(b=>b.setAttribute("aria-pressed",String(+b.dataset.step===S.step)));
+  document.querySelectorAll(".tour button").forEach(b=>{const m=b.textContent.match(/^(\d)\.\s*(.*)$/);if(m)b.innerHTML="<i>"+m[1]+"</i>"+m[2]});document.querySelectorAll(".tour button").forEach(b=>b.setAttribute("aria-pressed",String(+b.dataset.step===S.step)));
   document.getElementById("set").value=S.set;document.getElementById("dose").value=S.dose;document.getElementById("tol").value=S.tol;
   document.getElementById("tolOut").textContent="±"+S.tol.toFixed(2)+" °C";
   const o=R[S.set+"|"+S.dose],[k,w]=gate(o);
-  document.getElementById("verdict").className="verdict "+k;document.getElementById("stTitle").textContent=t[k];document.getElementById("stWhy").textContent=w;
+  document.getElementById("verdict").className="verdict "+k;const VI={pass:"<path d=\"M5 12.5l4.2 4.2L19 7\"/>",fail:"<path d=\"M7 7l10 10M17 7L7 17\"/>",wait:"<path d=\"M12 7v6\"/><circle cx=\"12\" cy=\"17\" r=\"0.6\"/>"};document.getElementById("vIcon").innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round">'+VI[k]+"</svg>";document.getElementById("stTitle").textContent=t[k];document.getElementById("stWhy").textContent=w;
   const has=o&&o.cool!=null,nf=n=>n.toLocaleString("en");
   document.getElementById("vCool").textContent=has?`${fm(o.cool)} °C (${fm(o.coolLo)} ~ ${fm(o.coolHi)})`:t.few;
   document.getElementById("vModel").textContent=o&&o.modelB!=null?`${fm(o.modelB)} °C`:t.na;

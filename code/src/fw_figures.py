@@ -42,7 +42,7 @@ def _err(c, lo, hi):
 
 def _save(fig, out: Path, name: str):
     out.mkdir(parents=True, exist_ok=True)
-    pdf = out.parent / "figures_pdf"
+    pdf = out.parent / "pdf"
     pdf.mkdir(parents=True, exist_ok=True)
     fig.savefig(out / f"{name}.png", bbox_inches="tight")
     fig.savefig(pdf / f"{name}.pdf", bbox_inches="tight")

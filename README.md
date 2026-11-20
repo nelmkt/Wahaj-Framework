@@ -44,7 +44,7 @@ Applied to Jeddah, it found that an accurate model can still be wrong about plan
 | Model on planting | Under-predicts measured cooling by **+1.0 to +7.2 °C**; only **14 of 744** test cells lie inside its data support |
 | Gate decision | The model was withheld, so no model-based scenario was released |
 
-![Model skill on held-out areas, and model-predicted against measured cooling](figures_png/fig3_model_test.png)
+![Model skill on held-out areas, and model-predicted against measured cooling](figures/png/fig3_model_test.png)
 
 *Left: the model predicts temperature well on held-out areas. Right: it falls further short of the measured cooling as more of a cell is greened. Every number traces to a table in [`REPRODUCE.md`](REPRODUCE.md).*
 
@@ -62,10 +62,9 @@ Work in a copy: the pipeline writes tables and figures. Earth Engine is only nee
 ## Repository map
 
 ```
-code/gee/        Earth Engine export scripts and the saved exports
-code/src/        framework modules (fw_*.py), analyses, figures and tests
-tables*/         result tables
-figures_*/       figures (PNG and PDF)
+code/            Earth Engine exports (gee/), framework and analyses (src/), earlier index module
+tables/          result tables, with revision_r1/ and revision_v11/ for the revision tables
+figures/         figures as png/ and pdf/, with r1/ for the revision figures
 docs/            technical details, file guide, data notes, audits and the demo
 manuscript/      superseded drafts that the tests read
 ```

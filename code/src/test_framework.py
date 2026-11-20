@@ -109,5 +109,5 @@ def test_pipeline_end_to_end(tmp_path):
     rep = (tmp_path / "out" / "manuscript" / "REPORT.md").read_text(encoding="utf-8")
     assert "Synthetic test panel" in rep
     for f in ("fig1_sample", "fig2_cooling", "fig3_model_test", "fig4_water_energy", "fig5_decision"):
-        assert (tmp_path / "out" / "figures_png" / f"{f}.png").exists()
+        assert (tmp_path / "out" / "figures/png" / f"{f}.png").exists()
     assert sum(res["measured"][st]["n"]["greened"] for st in SETTINGS) == 300

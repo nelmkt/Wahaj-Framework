@@ -62,8 +62,8 @@ def main():
     for s in SETTINGS:
         for k,e in res["measured"][s]["estimates"].items():
             res["measured"][s]["estimates"][k]={a:np.nan if b is None else b for a,b in e.items()}
-    figures.fig_cooling(res["measured"],cfg,out/"figures_png")
-    figures.fig_decision(res["decision"],res["test"],out/"figures_png")
+    figures.fig_cooling(res["measured"],cfg,out/"figures/png")
+    figures.fig_decision(res["decision"],res["test"],out/"figures/png")
     write_report(res,cfg,out/"manuscript"/"REPORT.md")
     (tables/"results.json").write_text(json.dumps(_jsonable(res),indent=1,ensure_ascii=False,allow_nan=False),encoding="utf-8")
     print("Refreshed report, figures, support tables and paired/matching diagnostics",flush=True)

@@ -1,4 +1,4 @@
-"""Scenes per summer month (supervisor review m5) from code/gee/panel_meta.json. Writes NEW tables_revision_r1/r1_scene_counts.csv."""
+"""Scenes per summer month (supervisor review m5) from code/gee/panel_meta.json. Writes NEW tables/revision_r1/r1_scene_counts.csv."""
 import json
 import sys
 from pathlib import Path
@@ -6,7 +6,7 @@ from pathlib import Path
 import pandas as pd
 
 ROOT = Path(sys.argv[1]).resolve()
-OUT = ROOT / "tables_revision_r1" / "r1_scene_counts.csv"
+OUT = ROOT / "tables/revision_r1" / "r1_scene_counts.csv"
 if OUT.exists():
     raise SystemExit(f"Refusing to overwrite {OUT}")
 meta = json.loads((ROOT / "code" / "gee" / "panel_meta.json").read_text(encoding="utf-8"))

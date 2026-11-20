@@ -1,6 +1,6 @@
 """Compare a full pipeline rerun (run_framework.py into a separate folder) with the saved tables (supervisor review M5).
 For every table the rerun writes, the saved file of the same name is compared value by value.
-Writes NEW tables_revision_r1/r1_rerun_comparison.csv.
+Writes NEW tables/revision_r1/r1_rerun_comparison.csv.
 usage: python revision_r1_rerun_compare.py <package_root> <rerun_folder>
 """
 import sys
@@ -10,7 +10,7 @@ import numpy as np
 import pandas as pd
 
 ROOT, RUN = Path(sys.argv[1]).resolve(), Path(sys.argv[2]).resolve()
-OUT = ROOT / "tables_revision_r1" / "r1_rerun_comparison.csv"
+OUT = ROOT / "tables/revision_r1" / "r1_rerun_comparison.csv"
 if OUT.exists():
     raise SystemExit(f"Refusing to overwrite {OUT}")
 rows = []

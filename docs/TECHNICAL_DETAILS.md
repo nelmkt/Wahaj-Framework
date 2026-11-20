@@ -18,27 +18,27 @@ The full results, repository structure, reproduction steps, tests and data notes
 | Result | Saved value | Source and limit |
 | --- | --- | --- |
 | XGBoost absolute-LST prediction | Spatial GroupKFold R² **0.795**, RMSE **1.184 °C**, MAE **0.903 °C**, on **19,650** non-greened cells | [`model_cv.csv`](../tables/model_cv.csv). Skill on LST levels does **not** validate predicted greening effects. |
-| Benchmark of regressors | Same cells, predictors and folds: XGBoost R² **0.795**, random forest **0.775**, gradient boosting **0.773**, linear regression **0.711** | [`model_benchmark_v11.csv`](../tables_revision_v11/model_benchmark_v11.csv). Fixed, untuned settings: the comparison ranks these settings, not the methods in general. |
+| Benchmark of regressors | Same cells, predictors and folds: XGBoost R² **0.795**, random forest **0.775**, gradient boosting **0.773**, linear regression **0.711** | [`model_benchmark_v11.csv`](../tables/revision_v11/model_benchmark_v11.csv). Fixed, untuned settings: the comparison ranks these settings, not the methods in general. |
 | Primary matched outside-area slope | **−1.181 °C per greened pixel** among **1,006** matched cells | [`headline_block_v8.csv`](../tables/headline_block_v8.csv), row `all`. A zero-intercept, dose-weighted summary in sampled, often contiguous blocks, not the marginal effect of a new isolated pixel. |
 | Leverage concentration | One spatial block carries **55.7%** of pooled squared-dose leverage | Same table, row `all`. Bootstrap and jackknife coverage is unproven. |
-| Small-patch own-only slope | **−1.925 °C per own pixel** among **419** primary matched outside cells with 1–2 greened pixels | Same table, row `1–2`; [algebraic check](../tables_revision_v11/own_only_vs_joint_identity_v11.csv). The own-only coefficient absorbs co-varying neighbour greening within the specified regression (joint own coefficients −1.036 to −0.988); it is not evidence of a larger physical effect per pixel. |
+| Small-patch own-only slope | **−1.925 °C per own pixel** among **419** primary matched outside cells with 1–2 greened pixels | Same table, row `1–2`; [algebraic check](../tables/revision_v11/own_only_vs_joint_identity_v11.csv). The own-only coefficient absorbs co-varying neighbour greening within the specified regression (joint own coefficients −1.036 to −0.988); it is not evidence of a larger physical effect per pixel. |
 | Model B outside support | **14/744** cells pass the feature-space screen, including **0/75** fully greened cells | [`test_support_counts.csv`](../tables/test_support_counts.csv), outside rows. This is the **narrower concurrent-change sensitivity**, not the 1,006-cell primary population. |
 | Model B minus measured outside contrast | **+1.01 to +7.24 °C** across dose classes | [`test_by_dose.csv`](../tables/test_by_dose.csv), outside Model B rows. The gap grows with dose; the model does not corroborate that outside gradient. |
-| Illustrative NEGI on measured contrasts | Cost exponent 0.5: **−0.127, −0.203, −0.213, 0**; linear cost: **+0.110, +0.034, −0.078, 0** for the four outside dose classes | [`tradeoff_illustration_v11.csv`](../tables_revision_v11/tradeoff_illustration_v11.csv). An illustration on different cells, not a released index value; the sign is decided by the assumed cost shape. |
-| Product emissivity at greened cells | Unchanged between 2014–15 and 2024–25 at **100%** of matched greened cells while NDVI rises; a first-order correction moves the primary slope from **−1.181** to **−1.452 °C per pixel** (largest case) | [`r1_emissivity_diagnostic.csv`](../tables_revision_r1/r1_emissivity_diagnostic.csv), [`r1_emissivity_bound.csv`](../tables_revision_r1/r1_emissivity_bound.csv). The first-order bound and the later full re-retrieval are separate sensitivity analyses; neither is independent field thermometry. |
-| Thermal footprint (simulation) | Under a 150 m point-spread function the own-only slope recovers **0.26** (isolated cells) to **0.68** (5 × 5-cell patches) of a known effect | [`r1_psf_recovery.csv`](../tables_revision_r1/r1_psf_recovery.csv). No physical spillover in the simulation: ring terms pick up optical blur. |
-| Dose relation with an intercept | Slope **−0.966 °C per pixel**, intercept **−1.34 °C** (outside) | [`r1_slope_intercept.csv`](../tables_revision_r1/r1_slope_intercept.csv), [`r1_dose_contrasts.csv`](../tables_revision_r1/r1_dose_contrasts.csv). Dose-class means are the primary estimates. |
-| Gates on the primary match | Model B support **15/419** (1–2 pixels), **0** for larger classes; Model B minus measured **+1.32 to +8.30 °C** | [`r1_gate3_primary.csv`](../tables_revision_r1/r1_gate3_primary.csv). Same outcome as the concurrent-change match. |
-| Model sensitivity | R² **0.741** without coordinates, **0.767** without emissivity, **0.881** with random folds | [`r1_model_sensitivity.csv`](../tables_revision_r1/r1_model_sensitivity.csv), [`r1_variogram.csv`](../tables_revision_r1/r1_variogram.csv). Random folds overstate skill for unsampled places. |
-| Re-retrieved LST (vegetation-following emissivity) | Primary outside slope **−1.246 °C per pixel** against **−1.181** with the product LST | [`r1_reretrieved_contrasts.csv`](../tables_revision_r1/r1_reretrieved_contrasts.csv), [`r1_gate3_primary_reretrieved.csv`](../tables_revision_r1/r1_gate3_primary_reretrieved.csv). Emissivity after Ermida et al. (2020). |
-| NDVI thresholds | Primary outside slope **−1.339 to −0.993 °C per pixel** across non-vegetated 0.10–0.20 and greened 0.25–0.35 | [`r1_ndvi_thresholds.csv`](../tables_revision_r1/r1_ndvi_thresholds.csv); re-exported panels in `code/gee/*_r1.csv.gz`. |
-| Full rerun | **30 of 30** pipeline tables agree with the saved values after aligning the descriptive SIO branch-year rows by key | [`r1_rerun_comparison.csv`](../tables_revision_r1/r1_rerun_comparison.csv). The earlier positional comparison reported a difference caused by row order, not values. |
+| Illustrative NEGI on measured contrasts | Cost exponent 0.5: **−0.127, −0.203, −0.213, 0**; linear cost: **+0.110, +0.034, −0.078, 0** for the four outside dose classes | [`tradeoff_illustration_v11.csv`](../tables/revision_v11/tradeoff_illustration_v11.csv). An illustration on different cells, not a released index value; the sign is decided by the assumed cost shape. |
+| Product emissivity at greened cells | Unchanged between 2014–15 and 2024–25 at **100%** of matched greened cells while NDVI rises; a first-order correction moves the primary slope from **−1.181** to **−1.452 °C per pixel** (largest case) | [`r1_emissivity_diagnostic.csv`](../tables/revision_r1/r1_emissivity_diagnostic.csv), [`r1_emissivity_bound.csv`](../tables/revision_r1/r1_emissivity_bound.csv). The first-order bound and the later full re-retrieval are separate sensitivity analyses; neither is independent field thermometry. |
+| Thermal footprint (simulation) | Under a 150 m point-spread function the own-only slope recovers **0.26** (isolated cells) to **0.68** (5 × 5-cell patches) of a known effect | [`r1_psf_recovery.csv`](../tables/revision_r1/r1_psf_recovery.csv). No physical spillover in the simulation: ring terms pick up optical blur. |
+| Dose relation with an intercept | Slope **−0.966 °C per pixel**, intercept **−1.34 °C** (outside) | [`r1_slope_intercept.csv`](../tables/revision_r1/r1_slope_intercept.csv), [`r1_dose_contrasts.csv`](../tables/revision_r1/r1_dose_contrasts.csv). Dose-class means are the primary estimates. |
+| Gates on the primary match | Model B support **15/419** (1–2 pixels), **0** for larger classes; Model B minus measured **+1.32 to +8.30 °C** | [`r1_gate3_primary.csv`](../tables/revision_r1/r1_gate3_primary.csv). Same outcome as the concurrent-change match. |
+| Model sensitivity | R² **0.741** without coordinates, **0.767** without emissivity, **0.881** with random folds | [`r1_model_sensitivity.csv`](../tables/revision_r1/r1_model_sensitivity.csv), [`r1_variogram.csv`](../tables/revision_r1/r1_variogram.csv). Random folds overstate skill for unsampled places. |
+| Re-retrieved LST (vegetation-following emissivity) | Primary outside slope **−1.246 °C per pixel** against **−1.181** with the product LST | [`r1_reretrieved_contrasts.csv`](../tables/revision_r1/r1_reretrieved_contrasts.csv), [`r1_gate3_primary_reretrieved.csv`](../tables/revision_r1/r1_gate3_primary_reretrieved.csv). Emissivity after Ermida et al. (2020). |
+| NDVI thresholds | Primary outside slope **−1.339 to −0.993 °C per pixel** across non-vegetated 0.10–0.20 and greened 0.25–0.35 | [`r1_ndvi_thresholds.csv`](../tables/revision_r1/r1_ndvi_thresholds.csv); re-exported panels in `code/gee/*_r1.csv.gz`. |
+| Full rerun | **30 of 30** pipeline tables agree with the saved values after aligning the descriptive SIO branch-year rows by key | [`r1_rerun_comparison.csv`](../tables/revision_r1/r1_rerun_comparison.csv). The earlier positional comparison reported a difference caused by row order, not values. |
 
 The 1,006-cell matched estimate and the 744-cell model diagnostics use different treated populations. They must not be read as one validation result. The small-patch exposure analyses are descriptive: the available data do not separate thermal-pixel blur, edge effects, neighbour cooling and neighbourhood confounding. The within-90 m ordering is **not resolved**.
 
-![Model skill on held-out areas, and model-predicted against measured cooling by number of greened pixels](../figures_png/fig3_model_test.png)
+![Model skill on held-out areas, and model-predicted against measured cooling by number of greened pixels](../figures/png/fig3_model_test.png)
 
-*Model test ([`fig3_model_test.png`](../figures_png/fig3_model_test.png)). Panel a: predicted against observed summer LST with areas held out. Panels b and c: measured cooling and the two model versions by dose class. Outside the built-up area, Model B falls further short of the measured contrast as the dose rises.*
+*Model test ([`fig3_model_test.png`](../figures/png/fig3_model_test.png)). Panel a: predicted against observed summer LST with areas held out. Panels b and c: measured cooling and the two model versions by dose class. Outside the built-up area, Model B falls further short of the measured contrast as the dose rises.*
 
 Because the model failed these checks, the framework released no model-based scenario and **no model-based value of the Normalized Environmental Gain Index (NEGI)**. The only NEGI numbers are the illustration on measured contrasts in the last row.
 
@@ -59,11 +59,13 @@ code/
   negi_original/     earlier index module (NEGI definitions; not run for the paper)
 
 tables/              result tables (CSV, JSON)
-tables_revision_v11/ four tables added for the paper (two algebraic checks, model benchmark, trade-off illustration)
-tables_revision_r1/  tables added for the supervisor revision (release 2.2.0)
-figures_r1/          two figures added for the supervisor revision
-figures_png/         figures (PNG)
-figures_pdf/         figures (PDF)
+  revision_v11/      four tables added for the paper (two algebraic checks, model benchmark, trade-off illustration)
+  revision_r1/       tables added for the supervisor revision (release 2.2.0)
+
+figures/
+  png/               figures (PNG)
+  pdf/               figures (PDF)
+  r1/                two figures added for the supervisor revision
 
 docs/
   FILE_GUIDE.md                    every script and table, grouped by purpose, in reading order

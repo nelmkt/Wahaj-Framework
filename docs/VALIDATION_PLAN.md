@@ -34,4 +34,4 @@ Publish the frozen protocol, site flow, exclusions, code commit, model artifact,
 
 ## Current evidence that motivates the plan
 
-The current Model B support screen accepts 14 of 744 outside validation cells and 0 of 75 fully greened cells (`tables/test_support_counts.csv`). One block carries 55.7% of the primary pooled squared-dose leverage (`tables/headline_block_v8.csv`). Thermal blur and emissivity sensitivities are in `tables_revision_r1/`. The 1,006-cell primary match and 744-cell concurrent-change test are different populations.
+The current Model B support screen accepts 14 of 744 outside validation cells and 0 of 75 fully greened cells (`tables/test_support_counts.csv`). One block carries 55.7% of the primary pooled squared-dose leverage (`tables/headline_block_v8.csv`). Thermal blur and emissivity sensitivities are in `tables/revision_r1/`. The 1,006-cell primary match and 744-cell concurrent-change test are different populations.

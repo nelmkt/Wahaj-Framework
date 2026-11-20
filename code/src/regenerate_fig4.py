@@ -17,5 +17,5 @@ if __name__ == "__main__":
     if not old[["year", "branch"]].equals(new[["year", "branch"]]) or not np.allclose(old.depth_m, new.depth_m, rtol=0, atol=1e-12):
         raise SystemExit("Verified workbook depths differ from plotted saved values; inspect before rendering")
     result["ledger"]["sio"] = verified
-    figures.fig_ledger(result["ledger"], Path("figures_png"))
+    figures.fig_ledger(result["ledger"], Path("figures/png"))
     print("Figure 4 PNG/PDF regenerated; all 17 workbook depths equal the previously plotted values.")

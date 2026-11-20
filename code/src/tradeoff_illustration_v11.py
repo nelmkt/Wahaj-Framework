@@ -25,7 +25,7 @@ from pathlib import Path
 import pandas as pd
 
 ROOT = Path(sys.argv[1]).resolve()
-OUT = ROOT / "tables_revision_v11" / "tradeoff_illustration_v11.csv"
+OUT = ROOT / "tables/revision_v11" / "tradeoff_illustration_v11.csv"
 if OUT.exists():
     raise SystemExit(f"Refusing to overwrite {OUT}")
 

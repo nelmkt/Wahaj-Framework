@@ -5,6 +5,7 @@
 - `docs/demo/`: interactive demo of the published results (English and Korean), served at nelmkt.github.io/Wahaj-Framework/demo and usable offline after one visit. It reads the saved tables; no result changed.
 - `README.md` shortened to an overview. The full results table and the structure, code, interpretation, reproduction, tests, data and earlier-version sections moved unchanged to `docs/TECHNICAL_DETAILS.md`; README images are in `docs/assets/`.
 - `MANIFEST_SHA256.txt` lists the new and changed files. No code, table or figure changed.
+- Tidier layout: `figures_png/`, `figures_pdf/` and `figures_r1/` are now `figures/png/`, `figures/pdf/` and `figures/r1/`; `tables_revision_r1/` and `tables_revision_v11/` are now `tables/revision_r1/` and `tables/revision_v11/`. Script paths, docs, `audit_claims.py` layout checks and `MANIFEST_SHA256.txt` were updated to match; file contents are unchanged. The frozen `tables/SHA256SUMS*.txt` manifests keep the paths they were written with. The suite passes (62 passed) and the claims audit passes.
 
 ## Unreleased — 22 October 2026
 

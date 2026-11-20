@@ -28,7 +28,7 @@ import fw_model as model  # noqa: E402
 import fw_panel as panel  # noqa: E402
 from fw_config import Config  # noqa: E402
 
-OUT = ROOT / "tables_revision_v11" / "model_benchmark_v11.csv"
+OUT = ROOT / "tables/revision_v11" / "model_benchmark_v11.csv"
 if OUT.exists():
     raise SystemExit(f"Refusing to overwrite {OUT}")
 

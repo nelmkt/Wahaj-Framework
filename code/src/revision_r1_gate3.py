@@ -2,7 +2,7 @@
 (fw_validate.compare) and support screen, applied with the pre-treatment-only strata instead of the
 concurrent-change strata of the pipeline's main run.
 
-Read-only on the package; writes one NEW table tables_revision_r1/r1_gate3_primary.csv.
+Read-only on the package; writes one NEW table tables/revision_r1/r1_gate3_primary.csv.
 usage: python revision_r1_gate3.py <package_root>      (PYTHONDONTWRITEBYTECODE=1; ~10-20 minutes)
 """
 import sys
@@ -20,7 +20,7 @@ import fw_panel as panel  # noqa: E402
 import fw_validate as validate  # noqa: E402
 from fw_config import SETTINGS, Config  # noqa: E402
 
-OUT = ROOT / "tables_revision_r1" / "r1_gate3_primary.csv"
+OUT = ROOT / "tables/revision_r1" / "r1_gate3_primary.csv"
 if OUT.exists():
     raise SystemExit(f"Refusing to overwrite {OUT}")
 

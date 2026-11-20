@@ -22,7 +22,7 @@ def main():
                       by_dose=by_dose[by_dose.test == "A"],
                       strict=by_setting[by_setting.test == "B"],
                       strict_by_dose=by_dose[by_dose.test == "B"])
-    figures.fig_test(cv, validation, Path("figures_png"))
+    figures.fig_test(cv, validation, Path("figures/png"))
     print(f"Figure 3 PNG/PDF regenerated together; held-out R2={cv['r2']:.6f}.")
 
 

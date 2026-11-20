@@ -74,26 +74,26 @@ Rows are file line numbers; the header is row 1.
 | −0.988 | tables/ring_reduced_coefficients_v8_followup6.csv | row 9 | beta_C_per_pixel | code/src/analyze_ring_reduced_v8_followup6.py | python code/src/analyze_ring_reduced_v8_followup6.py |
 | −1.014 | tables/pixel_subring_regression_v8_followup6.csv | row 2 | beta_C_per_pixel | code/src/analyze_pixel_subrings_v8_followup6.py | python code/src/analyze_pixel_subrings_v8_followup6.py |
 | −1.013 | tables/pixel_subring_regression_v8_followup6.csv | row 8 | beta_C_per_pixel | code/src/analyze_pixel_subrings_v8_followup6.py | python code/src/analyze_pixel_subrings_v8_followup6.py |
-| −1.925 | tables_revision_v11/own_only_vs_joint_identity_v11.csv | row 2 | b_own_only | math check written for the paper (docs/MATH_CHECK_V11.md) | see MATH_CHECK_V11.md |
-| −1.002 | tables_revision_v11/own_only_vs_joint_identity_v11.csv | row 2 | beta_own | math check written for the paper (docs/MATH_CHECK_V11.md) | see MATH_CHECK_V11.md |
-| −0.923 | tables_revision_v11/own_only_vs_joint_identity_v11.csv | row 2 | sum_beta_ext_times_gamma | math check written for the paper (docs/MATH_CHECK_V11.md) | see MATH_CHECK_V11.md |
-| −1.925 | tables_revision_v11/own_only_vs_joint_identity_v11.csv | row 2 | rhs_beta_own_plus_sum | math check written for the paper (docs/MATH_CHECK_V11.md) | see MATH_CHECK_V11.md |
-| −1.036 | tables_revision_v11/own_only_vs_joint_identity_v11.csv | row 5 | beta_own | math check written for the paper (docs/MATH_CHECK_V11.md) | see MATH_CHECK_V11.md |
-| −0.889 | tables_revision_v11/own_only_vs_joint_identity_v11.csv | row 5 | sum_beta_ext_times_gamma | math check written for the paper (docs/MATH_CHECK_V11.md) | see MATH_CHECK_V11.md |
-| −1.925 | tables_revision_v11/own_only_vs_joint_identity_v11.csv | row 5 | rhs_beta_own_plus_sum | math check written for the paper (docs/MATH_CHECK_V11.md) | see MATH_CHECK_V11.md |
-| −1.925 | tables_revision_v11/own_only_vs_joint_identity_v11.csv | row 5 | b_own_only | math check written for the paper (docs/MATH_CHECK_V11.md) | see MATH_CHECK_V11.md |
-| −0.988 | tables_revision_v11/own_only_vs_joint_identity_v11.csv | row 7 | beta_own | math check written for the paper (docs/MATH_CHECK_V11.md) | see MATH_CHECK_V11.md |
-| −0.937 | tables_revision_v11/own_only_vs_joint_identity_v11.csv | row 7 | sum_beta_ext_times_gamma | math check written for the paper (docs/MATH_CHECK_V11.md) | see MATH_CHECK_V11.md |
-| −1.925 | tables_revision_v11/own_only_vs_joint_identity_v11.csv | row 7 | rhs_beta_own_plus_sum | math check written for the paper (docs/MATH_CHECK_V11.md) | see MATH_CHECK_V11.md |
-| −1.925 | tables_revision_v11/own_only_vs_joint_identity_v11.csv | row 7 | b_own_only | math check written for the paper (docs/MATH_CHECK_V11.md) | see MATH_CHECK_V11.md |
-| −1.014 | tables_revision_v11/own_only_vs_joint_identity_v11.csv | row 9 | beta_own | math check written for the paper (docs/MATH_CHECK_V11.md) | see MATH_CHECK_V11.md |
-| −0.912 | tables_revision_v11/own_only_vs_joint_identity_v11.csv | row 9 | sum_beta_ext_times_gamma | math check written for the paper (docs/MATH_CHECK_V11.md) | see MATH_CHECK_V11.md |
-| −1.925 | tables_revision_v11/own_only_vs_joint_identity_v11.csv | row 9 | rhs_beta_own_plus_sum | math check written for the paper (docs/MATH_CHECK_V11.md) | see MATH_CHECK_V11.md |
-| −1.925 | tables_revision_v11/own_only_vs_joint_identity_v11.csv | row 9 | b_own_only | math check written for the paper (docs/MATH_CHECK_V11.md) | see MATH_CHECK_V11.md |
-| −1.013 | tables_revision_v11/own_only_vs_joint_identity_v11.csv | row 14 | beta_own | math check written for the paper (docs/MATH_CHECK_V11.md) | see MATH_CHECK_V11.md |
-| −0.912 | tables_revision_v11/own_only_vs_joint_identity_v11.csv | row 14 | sum_beta_ext_times_gamma | math check written for the paper (docs/MATH_CHECK_V11.md) | see MATH_CHECK_V11.md |
-| −1.925 | tables_revision_v11/own_only_vs_joint_identity_v11.csv | row 14 | rhs_beta_own_plus_sum | math check written for the paper (docs/MATH_CHECK_V11.md) | see MATH_CHECK_V11.md |
-| −1.925 | tables_revision_v11/own_only_vs_joint_identity_v11.csv | row 14 | b_own_only | math check written for the paper (docs/MATH_CHECK_V11.md) | see MATH_CHECK_V11.md |
+| −1.925 | tables/revision_v11/own_only_vs_joint_identity_v11.csv | row 2 | b_own_only | math check written for the paper (docs/MATH_CHECK_V11.md) | see MATH_CHECK_V11.md |
+| −1.002 | tables/revision_v11/own_only_vs_joint_identity_v11.csv | row 2 | beta_own | math check written for the paper (docs/MATH_CHECK_V11.md) | see MATH_CHECK_V11.md |
+| −0.923 | tables/revision_v11/own_only_vs_joint_identity_v11.csv | row 2 | sum_beta_ext_times_gamma | math check written for the paper (docs/MATH_CHECK_V11.md) | see MATH_CHECK_V11.md |
+| −1.925 | tables/revision_v11/own_only_vs_joint_identity_v11.csv | row 2 | rhs_beta_own_plus_sum | math check written for the paper (docs/MATH_CHECK_V11.md) | see MATH_CHECK_V11.md |
+| −1.036 | tables/revision_v11/own_only_vs_joint_identity_v11.csv | row 5 | beta_own | math check written for the paper (docs/MATH_CHECK_V11.md) | see MATH_CHECK_V11.md |
+| −0.889 | tables/revision_v11/own_only_vs_joint_identity_v11.csv | row 5 | sum_beta_ext_times_gamma | math check written for the paper (docs/MATH_CHECK_V11.md) | see MATH_CHECK_V11.md |
+| −1.925 | tables/revision_v11/own_only_vs_joint_identity_v11.csv | row 5 | rhs_beta_own_plus_sum | math check written for the paper (docs/MATH_CHECK_V11.md) | see MATH_CHECK_V11.md |
+| −1.925 | tables/revision_v11/own_only_vs_joint_identity_v11.csv | row 5 | b_own_only | math check written for the paper (docs/MATH_CHECK_V11.md) | see MATH_CHECK_V11.md |
+| −0.988 | tables/revision_v11/own_only_vs_joint_identity_v11.csv | row 7 | beta_own | math check written for the paper (docs/MATH_CHECK_V11.md) | see MATH_CHECK_V11.md |
+| −0.937 | tables/revision_v11/own_only_vs_joint_identity_v11.csv | row 7 | sum_beta_ext_times_gamma | math check written for the paper (docs/MATH_CHECK_V11.md) | see MATH_CHECK_V11.md |
+| −1.925 | tables/revision_v11/own_only_vs_joint_identity_v11.csv | row 7 | rhs_beta_own_plus_sum | math check written for the paper (docs/MATH_CHECK_V11.md) | see MATH_CHECK_V11.md |
+| −1.925 | tables/revision_v11/own_only_vs_joint_identity_v11.csv | row 7 | b_own_only | math check written for the paper (docs/MATH_CHECK_V11.md) | see MATH_CHECK_V11.md |
+| −1.014 | tables/revision_v11/own_only_vs_joint_identity_v11.csv | row 9 | beta_own | math check written for the paper (docs/MATH_CHECK_V11.md) | see MATH_CHECK_V11.md |
+| −0.912 | tables/revision_v11/own_only_vs_joint_identity_v11.csv | row 9 | sum_beta_ext_times_gamma | math check written for the paper (docs/MATH_CHECK_V11.md) | see MATH_CHECK_V11.md |
+| −1.925 | tables/revision_v11/own_only_vs_joint_identity_v11.csv | row 9 | rhs_beta_own_plus_sum | math check written for the paper (docs/MATH_CHECK_V11.md) | see MATH_CHECK_V11.md |
+| −1.925 | tables/revision_v11/own_only_vs_joint_identity_v11.csv | row 9 | b_own_only | math check written for the paper (docs/MATH_CHECK_V11.md) | see MATH_CHECK_V11.md |
+| −1.013 | tables/revision_v11/own_only_vs_joint_identity_v11.csv | row 14 | beta_own | math check written for the paper (docs/MATH_CHECK_V11.md) | see MATH_CHECK_V11.md |
+| −0.912 | tables/revision_v11/own_only_vs_joint_identity_v11.csv | row 14 | sum_beta_ext_times_gamma | math check written for the paper (docs/MATH_CHECK_V11.md) | see MATH_CHECK_V11.md |
+| −1.925 | tables/revision_v11/own_only_vs_joint_identity_v11.csv | row 14 | rhs_beta_own_plus_sum | math check written for the paper (docs/MATH_CHECK_V11.md) | see MATH_CHECK_V11.md |
+| −1.925 | tables/revision_v11/own_only_vs_joint_identity_v11.csv | row 14 | b_own_only | math check written for the paper (docs/MATH_CHECK_V11.md) | see MATH_CHECK_V11.md |
 | 0.832 | tables/ring_pair_collinearity_v8_followup4.csv | row 5 | uncentred_cosine | code/src/analyze_ring_robustness_v8_followup4.py | python code/src/analyze_ring_robustness_v8_followup4.py |
 | 0.725 | tables/ring_pair_collinearity_v8_followup4.csv | row 6 | uncentred_cosine | code/src/analyze_ring_robustness_v8_followup4.py | python code/src/analyze_ring_robustness_v8_followup4.py |
 | 0.897 | tables/ring_pair_collinearity_v8_followup4.csv | row 7 | uncentred_cosine | code/src/analyze_ring_robustness_v8_followup4.py | python code/src/analyze_ring_robustness_v8_followup4.py |
@@ -226,8 +226,8 @@ The public release was checked on 13 October 2026: 58 tests passed and 4 tests o
 
 | Table | Command (from the repository root, panels decompressed) |
 |---|---|
-| `tables_revision_v11/model_benchmark_v11.csv` | `python code/src/benchmark_models_v11.py .` |
-| `tables_revision_v11/tradeoff_illustration_v11.csv` | `python code/src/tradeoff_illustration_v11.py .` |
+| `tables/revision_v11/model_benchmark_v11.csv` | `python code/src/benchmark_models_v11.py .` |
+| `tables/revision_v11/tradeoff_illustration_v11.csv` | `python code/src/tradeoff_illustration_v11.py .` |
 
 Both scripts refuse to overwrite an existing table; work in a copy or remove the saved file first. The benchmark stops if its XGBoost row does not reproduce `tables/model_cv.csv`.
 
@@ -235,24 +235,24 @@ Both scripts refuse to overwrite an existing table; work in a copy or remove the
 
 | Output | Command (from the repository root, panels decompressed) |
 |---|---|
-| most of `tables_revision_r1/` | `python code/src/revision_r1_analyses.py .` |
-| `tables_revision_r1/r1_gate3_primary.csv` | `python code/src/revision_r1_gate3.py .` (about 20 minutes) |
-| `tables_revision_r1/r1_psf_recovery.csv` | `python code/src/revision_r1_psf_recovery.py .` |
-| `tables_revision_r1/r1_scene_counts.csv` | `python code/src/revision_r1_scene_counts.py .` |
-| `figures_r1/` | `python code/src/revision_r1_figures.py .` |
+| most of `tables/revision_r1/` | `python code/src/revision_r1_analyses.py .` |
+| `tables/revision_r1/r1_gate3_primary.csv` | `python code/src/revision_r1_gate3.py .` (about 20 minutes) |
+| `tables/revision_r1/r1_psf_recovery.csv` | `python code/src/revision_r1_psf_recovery.py .` |
+| `tables/revision_r1/r1_scene_counts.csv` | `python code/src/revision_r1_scene_counts.py .` |
+| `figures/r1/` | `python code/src/revision_r1_figures.py .` |
 
-`revision_r1_analyses.py` creates `tables_revision_r1/` and stops if it exists; work in a copy. It stops unless its full-model cross-validation reproduces `tables/model_cv.csv`. The LST re-retrieval needs an Earth Engine account: `python code/gee/gee_r1_lst_reretrieval.py --project YOUR-PROJECT`, then `python code/src/revision_r1_reretrieved_contrasts.py .`
+`revision_r1_analyses.py` creates `tables/revision_r1/` and stops if it exists; work in a copy. It stops unless its full-model cross-validation reproduces `tables/model_cv.csv`. The LST re-retrieval needs an Earth Engine account: `python code/gee/gee_r1_lst_reretrieval.py --project YOUR-PROJECT`, then `python code/src/revision_r1_reretrieved_contrasts.py .`
 
 ## Added in release 2.3.0
 
 | Output | Command |
 |---|---|
 | `code/gee/panel_lst_reretrieved_r1.csv` | `python code/gee/gee_r1_lst_reretrieval.py --project YOUR-PROJECT` (Earth Engine) |
-| `tables_revision_r1/r1_reretrieved_contrasts.csv` | `python code/src/revision_r1_reretrieved_contrasts.py .` |
-| `tables_revision_r1/r1_gate3_primary_reretrieved.csv` | `python code/src/revision_r1_gate3_reretrieved.py .` |
+| `tables/revision_r1/r1_reretrieved_contrasts.csv` | `python code/src/revision_r1_reretrieved_contrasts.py .` |
+| `tables/revision_r1/r1_gate3_primary_reretrieved.csv` | `python code/src/revision_r1_gate3_reretrieved.py .` |
 | `code/gee/panel_thr_*_r1.csv` | `python code/gee/gee_r1_export_panel_thresholds.py --project YOUR-PROJECT --nonveg 0.10 --green 0.30 --skip-et --out ...` (and 0.20/0.30, 0.15/0.25, 0.15/0.35) |
-| `tables_revision_r1/r1_ndvi_thresholds.csv` | `python code/src/revision_r1_ndvi_thresholds.py .` |
-| `tables_revision_r1/r1_rerun_comparison.csv` | `python code/src/run_framework.py --panel code/gee/panel.csv --out RERUN` then `python code/src/revision_r1_rerun_compare.py . RERUN` |
-| `figures_r1/fig_r1_cell_classes.png` | `python code/src/revision_r1_fig1_map.py .` |
+| `tables/revision_r1/r1_ndvi_thresholds.csv` | `python code/src/revision_r1_ndvi_thresholds.py .` |
+| `tables/revision_r1/r1_rerun_comparison.csv` | `python code/src/run_framework.py --panel code/gee/panel.csv --out RERUN` then `python code/src/revision_r1_rerun_compare.py . RERUN` |
+| `figures/r1/fig_r1_cell_classes.png` | `python code/src/revision_r1_fig1_map.py .` |
 
 The `.gz` exports decompress to the `.csv` files named in `MANIFEST_SHA256.txt`.

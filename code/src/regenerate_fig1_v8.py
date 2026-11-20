@@ -59,7 +59,7 @@ if __name__ == "__main__":
             raise SystemExit("Saved Figure 1 comparison differs from recomputation")
     else:
         table.to_csv(OUT, index=False)
-    figures.fig_sample(df, used, ROOT / "figures_png", cfg.stable_surface_max,
+    figures.fig_sample(df, used, ROOT / "figures/png", cfg.stable_surface_max,
                        match_label="primary")
     print(table.to_string(index=False))
     print("Figure 1 PNG/PDF regenerated from the same primary match as the comparison table")

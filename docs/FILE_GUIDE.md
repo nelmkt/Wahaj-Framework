@@ -369,7 +369,7 @@ Descriptions of scripts are the first sentence of each script's own docstring. D
 
 `tables/imagery_sampling_key_v7.csv` is listed in the inventory but withheld from the repository (blinded review key).
 
-## tables_revision_v11
+## tables/revision_v11
 
 | File | What it holds |
 |---|---|
@@ -378,7 +378,7 @@ Descriptions of scripts are the first sentence of each script's own docstring. D
 | `model_benchmark_v11.csv` | spatially blocked skill of four regressors on Model B's training set |
 | `tradeoff_illustration_v11.csv` | illustrative NEGI on measured contrasts and hypothetical irrigation energy per degree, by dose class |
 
-## tables_revision_r1
+## tables/revision_r1
 
 | File | Content |
 |---|---|
@@ -394,7 +394,7 @@ Descriptions of scripts are the first sentence of each script's own docstring. D
 | `r1_slope_intercept.csv` | see `docs/REVISION_R1.md` |
 | `r1_variogram.csv` | see `docs/REVISION_R1.md` |
 
-## figures_r1
+## figures/r1
 
 | File | Content |
 |---|---|
@@ -404,7 +404,7 @@ Descriptions of scripts are the first sentence of each script's own docstring. D
 | `r1_gate3_primary_reretrieved.csv` | release 2.3.0 |
 | `r1_ndvi_thresholds.csv` | release 2.3.0 |
 | `r1_rerun_comparison.csv` | release 2.3.0 |
-| `fig_r1_cell_classes.png` (figures_r1) | Fig. 1, release 2.3.0 |
+| `fig_r1_cell_classes.png` (figures/r1) | Fig. 1, release 2.3.0 |
 
 ## manuscript/
 

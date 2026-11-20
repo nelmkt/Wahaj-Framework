@@ -1,7 +1,7 @@
 """Analyses requested in the supervisor review of 5 October 2026 (Sections 1-2), run offline on the saved v11 panel.
 
 Read-only on the package: imports fw_config, fw_panel, fw_matching and fw_model; never NEGI_Framework.py.
-Writes NEW tables in tables_revision_r1/ and refuses to overwrite.
+Writes NEW tables in tables/revision_r1/ and refuses to overwrite.
 
   r1_emissivity_diagnostic.csv   M1  product emissivity (ST_EMIS) before/after at greened cells vs controls
   r1_emissivity_bound.csv        M1  first-order bound: own-only slope if greened pixels' emissivity were raised
@@ -31,7 +31,7 @@ import fw_model as model  # noqa: E402
 import fw_panel as panel  # noqa: E402
 from fw_config import SETTINGS, Config  # noqa: E402
 
-OUT = ROOT / "tables_revision_r1"
+OUT = ROOT / "tables/revision_r1"
 OUT.mkdir(exist_ok=False)
 
 
@@ -186,7 +186,7 @@ vg["practical_range_km"] = a
 vg["nugget_C2"], vg["partial_sill_C2"] = nug, sill
 save("r1_variogram.csv", vg)
 
-trd = pd.read_csv(ROOT / "tables_revision_v11" / "tradeoff_illustration_v11.csv")
+trd = pd.read_csv(ROOT / "tables/revision_v11" / "tradeoff_illustration_v11.csv")
 rows = []
 for _, rr in trd.iterrows():
     for p in (0.5, 1.0):

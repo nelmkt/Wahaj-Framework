@@ -74,10 +74,10 @@ None.
 | 1 | abstract | 744 | tables/test_support_counts.csv : rows [2, 3, 4, 5] : sum of n_matched = 744.0 | matches table sum |
 | 1 | abstract | 1.01 | tables/test_by_dose.csv : row 9 : difference_C = 1.0091290752346151 | matches table at printed precision |
 | 1 | abstract | 7.24 | tables/test_by_dose.csv : row 12 : difference_C = 7.243434222436154 | matches table at printed precision |
-| 1 | abstract | 0.213 | tables_revision_v11/tradeoff_illustration_v11.csv : row 4 : negi_p05 = -0.2131252626946737 | matches table at printed precision |
-| 1 | abstract | 0.110 | tables_revision_v11/tradeoff_illustration_v11.csv : row 2 : negi_p10 = 0.1097144043683741 | matches table at printed precision |
-| 1 | abstract | 2.9 | tables_revision_v11/tradeoff_illustration_v11.csv : row 2 : swro_MWh_per_degree_central = 2.890196555833614 | matches table at printed precision |
-| 1 | abstract | 5.3 | tables_revision_v11/tradeoff_illustration_v11.csv : row 4 : swro_MWh_per_degree_central = 5.311708317676671 | matches table at printed precision |
+| 1 | abstract | 0.213 | tables/revision_v11/tradeoff_illustration_v11.csv : row 4 : negi_p05 = -0.2131252626946737 | matches table at printed precision |
+| 1 | abstract | 0.110 | tables/revision_v11/tradeoff_illustration_v11.csv : row 2 : negi_p10 = 0.1097144043683741 | matches table at printed precision |
+| 1 | abstract | 2.9 | tables/revision_v11/tradeoff_illustration_v11.csv : row 2 : swro_MWh_per_degree_central = 2.890196555833614 | matches table at printed precision |
+| 1 | abstract | 5.3 | tables/revision_v11/tradeoff_illustration_v11.csv : row 4 : swro_MWh_per_degree_central = 5.311708317676671 | matches table at printed precision |
 | 21 | table cells | 90 | code/gee/panel_meta.json cell_m | constant; source stated |
 | 21 | table cells | 2014 | code/src/fw_config.py:17 pre_years | constant; source stated |
 | 21 | table cells | 2025 | code/src/fw_config.py:19 post_years | constant; source stated |
@@ -267,7 +267,7 @@ None.
 | 64 | paragraph | 0.988 | tables/ring_reduced_coefficients_v8_followup6.csv : row 9 : beta_C_per_pixel = -0.9878776897406444 | matches table at printed precision |
 | 64 | paragraph | 1.014 | tables/pixel_subring_regression_v8_followup6.csv : row 2 : beta_C_per_pixel = -1.0137727586302174 | matches table at printed precision |
 | 64 | paragraph | 1.013 | tables/pixel_subring_regression_v8_followup6.csv : row 8 : beta_C_per_pixel = -1.013317040565403 | matches table at printed precision |
-| 64 | paragraph | 1.925 | tables_revision_v11/own_only_vs_joint_identity_v11.csv : row 2 : b_own_only = -1.9253007042875268 | matches table at printed precision |
+| 64 | paragraph | 1.925 | tables/revision_v11/own_only_vs_joint_identity_v11.csv : row 2 : b_own_only = -1.9253007042875268 | matches table at printed precision |
 | 65 | table caption | 419 | tables/headline_block_v8.csv : row 3 : n_matched = 419.0 | matches table at printed precision |
 | 65 | table caption | 1 | code/src/fw_config.py:35 dose_bins | constant; source stated |
 | 65 | table caption | 2 | code/src/fw_config.py:35 dose_bins | constant; source stated |
@@ -277,38 +277,38 @@ None.
 | 65 | table cells | 180 | ring bounds in metres: code/src/analyze_pixel_subrings_v8_followup6.py:27-30 and tables/ring_reduced_coefficients_v8_followup6.csv term names | constant; source stated |
 | 65 | table cells | 180 | ring bounds in metres: code/src/analyze_pixel_subrings_v8_followup6.py:27-30 and tables/ring_reduced_coefficients_v8_followup6.csv term names | constant; source stated |
 | 65 | table cells | 300 | ring bounds in metres: code/src/analyze_pixel_subrings_v8_followup6.py:27-30 and tables/ring_reduced_coefficients_v8_followup6.csv term names | constant; source stated |
-| 65 | table cells | 1.002 | tables_revision_v11/own_only_vs_joint_identity_v11.csv : row 2 : beta_own = -1.0023900752751884 | matches table at printed precision |
-| 65 | table cells | 0.923 | tables_revision_v11/own_only_vs_joint_identity_v11.csv : row 2 : sum_beta_ext_times_gamma = -0.9229106290123382 | matches table at printed precision |
-| 65 | table cells | 1.925 | tables_revision_v11/own_only_vs_joint_identity_v11.csv : row 2 : rhs_beta_own_plus_sum = -1.9253007042875263 | matches table at printed precision |
-| 65 | table cells | 1.925 | tables_revision_v11/own_only_vs_joint_identity_v11.csv : row 2 : rhs_beta_own_plus_sum = -1.9253007042875263 | matches table at printed precision |
-| 65 | table cells | 1.036 | tables_revision_v11/own_only_vs_joint_identity_v11.csv : row 5 : beta_own = -1.0358358785511916 | matches table at printed precision |
-| 65 | table cells | 0.889 | tables_revision_v11/own_only_vs_joint_identity_v11.csv : row 5 : sum_beta_ext_times_gamma = -0.8894648257363356 | matches table at printed precision |
-| 65 | table cells | 1.925 | tables_revision_v11/own_only_vs_joint_identity_v11.csv : row 2 : rhs_beta_own_plus_sum = -1.9253007042875263 | matches table at printed precision |
-| 65 | table cells | 1.925 | tables_revision_v11/own_only_vs_joint_identity_v11.csv : row 2 : rhs_beta_own_plus_sum = -1.9253007042875263 | matches table at printed precision |
+| 65 | table cells | 1.002 | tables/revision_v11/own_only_vs_joint_identity_v11.csv : row 2 : beta_own = -1.0023900752751884 | matches table at printed precision |
+| 65 | table cells | 0.923 | tables/revision_v11/own_only_vs_joint_identity_v11.csv : row 2 : sum_beta_ext_times_gamma = -0.9229106290123382 | matches table at printed precision |
+| 65 | table cells | 1.925 | tables/revision_v11/own_only_vs_joint_identity_v11.csv : row 2 : rhs_beta_own_plus_sum = -1.9253007042875263 | matches table at printed precision |
+| 65 | table cells | 1.925 | tables/revision_v11/own_only_vs_joint_identity_v11.csv : row 2 : rhs_beta_own_plus_sum = -1.9253007042875263 | matches table at printed precision |
+| 65 | table cells | 1.036 | tables/revision_v11/own_only_vs_joint_identity_v11.csv : row 5 : beta_own = -1.0358358785511916 | matches table at printed precision |
+| 65 | table cells | 0.889 | tables/revision_v11/own_only_vs_joint_identity_v11.csv : row 5 : sum_beta_ext_times_gamma = -0.8894648257363356 | matches table at printed precision |
+| 65 | table cells | 1.925 | tables/revision_v11/own_only_vs_joint_identity_v11.csv : row 2 : rhs_beta_own_plus_sum = -1.9253007042875263 | matches table at printed precision |
+| 65 | table cells | 1.925 | tables/revision_v11/own_only_vs_joint_identity_v11.csv : row 2 : rhs_beta_own_plus_sum = -1.9253007042875263 | matches table at printed precision |
 | 65 | table cells | 90 | ring bounds in metres: code/src/analyze_pixel_subrings_v8_followup6.py:27-30 and tables/ring_reduced_coefficients_v8_followup6.csv term names | constant; source stated |
 | 65 | table cells | 300 | ring bounds in metres: code/src/analyze_pixel_subrings_v8_followup6.py:27-30 and tables/ring_reduced_coefficients_v8_followup6.csv term names | constant; source stated |
-| 65 | table cells | 0.988 | tables_revision_v11/own_only_vs_joint_identity_v11.csv : row 7 : beta_own = -0.9878776897406448 | matches table at printed precision |
-| 65 | table cells | 0.937 | tables_revision_v11/own_only_vs_joint_identity_v11.csv : row 7 : sum_beta_ext_times_gamma = -0.937423014546882 | matches table at printed precision |
-| 65 | table cells | 1.925 | tables_revision_v11/own_only_vs_joint_identity_v11.csv : row 2 : rhs_beta_own_plus_sum = -1.9253007042875263 | matches table at printed precision |
-| 65 | table cells | 1.925 | tables_revision_v11/own_only_vs_joint_identity_v11.csv : row 2 : rhs_beta_own_plus_sum = -1.9253007042875263 | matches table at printed precision |
+| 65 | table cells | 0.988 | tables/revision_v11/own_only_vs_joint_identity_v11.csv : row 7 : beta_own = -0.9878776897406448 | matches table at printed precision |
+| 65 | table cells | 0.937 | tables/revision_v11/own_only_vs_joint_identity_v11.csv : row 7 : sum_beta_ext_times_gamma = -0.937423014546882 | matches table at printed precision |
+| 65 | table cells | 1.925 | tables/revision_v11/own_only_vs_joint_identity_v11.csv : row 2 : rhs_beta_own_plus_sum = -1.9253007042875263 | matches table at printed precision |
+| 65 | table cells | 1.925 | tables/revision_v11/own_only_vs_joint_identity_v11.csv : row 2 : rhs_beta_own_plus_sum = -1.9253007042875263 | matches table at printed precision |
 | 65 | table cells | 0 | ring bounds in metres: code/src/analyze_pixel_subrings_v8_followup6.py:27-30 and tables/ring_reduced_coefficients_v8_followup6.csv term names | constant; source stated |
 | 65 | table cells | 30 | ring bounds in metres: code/src/analyze_pixel_subrings_v8_followup6.py:27-30 and tables/ring_reduced_coefficients_v8_followup6.csv term names | constant; source stated |
 | 65 | table cells | 30 | ring bounds in metres: code/src/analyze_pixel_subrings_v8_followup6.py:27-30 and tables/ring_reduced_coefficients_v8_followup6.csv term names | constant; source stated |
 | 65 | table cells | 60 | ring bounds in metres: code/src/analyze_pixel_subrings_v8_followup6.py:27-30 and tables/ring_reduced_coefficients_v8_followup6.csv term names | constant; source stated |
 | 65 | table cells | 60 | ring bounds in metres: code/src/analyze_pixel_subrings_v8_followup6.py:27-30 and tables/ring_reduced_coefficients_v8_followup6.csv term names | constant; source stated |
 | 65 | table cells | 90 | ring bounds in metres: code/src/analyze_pixel_subrings_v8_followup6.py:27-30 and tables/ring_reduced_coefficients_v8_followup6.csv term names | constant; source stated |
-| 65 | table cells | 1.014 | tables_revision_v11/own_only_vs_joint_identity_v11.csv : row 9 : beta_own = -1.0137727586302174 | matches table at printed precision |
-| 65 | table cells | 0.912 | tables_revision_v11/own_only_vs_joint_identity_v11.csv : row 9 : sum_beta_ext_times_gamma = -0.9115279456573095 | matches table at printed precision |
-| 65 | table cells | 1.925 | tables_revision_v11/own_only_vs_joint_identity_v11.csv : row 2 : rhs_beta_own_plus_sum = -1.9253007042875263 | matches table at printed precision |
-| 65 | table cells | 1.925 | tables_revision_v11/own_only_vs_joint_identity_v11.csv : row 2 : rhs_beta_own_plus_sum = -1.9253007042875263 | matches table at printed precision |
+| 65 | table cells | 1.014 | tables/revision_v11/own_only_vs_joint_identity_v11.csv : row 9 : beta_own = -1.0137727586302174 | matches table at printed precision |
+| 65 | table cells | 0.912 | tables/revision_v11/own_only_vs_joint_identity_v11.csv : row 9 : sum_beta_ext_times_gamma = -0.9115279456573095 | matches table at printed precision |
+| 65 | table cells | 1.925 | tables/revision_v11/own_only_vs_joint_identity_v11.csv : row 2 : rhs_beta_own_plus_sum = -1.9253007042875263 | matches table at printed precision |
+| 65 | table cells | 1.925 | tables/revision_v11/own_only_vs_joint_identity_v11.csv : row 2 : rhs_beta_own_plus_sum = -1.9253007042875263 | matches table at printed precision |
 | 65 | table cells | 0 | ring bounds in metres: code/src/analyze_pixel_subrings_v8_followup6.py:27-30 and tables/ring_reduced_coefficients_v8_followup6.csv term names | constant; source stated |
 | 65 | table cells | 30 | ring bounds in metres: code/src/analyze_pixel_subrings_v8_followup6.py:27-30 and tables/ring_reduced_coefficients_v8_followup6.csv term names | constant; source stated |
 | 65 | table cells | 30 | ring bounds in metres: code/src/analyze_pixel_subrings_v8_followup6.py:27-30 and tables/ring_reduced_coefficients_v8_followup6.csv term names | constant; source stated |
 | 65 | table cells | 90 | ring bounds in metres: code/src/analyze_pixel_subrings_v8_followup6.py:27-30 and tables/ring_reduced_coefficients_v8_followup6.csv term names | constant; source stated |
-| 65 | table cells | 1.013 | tables_revision_v11/own_only_vs_joint_identity_v11.csv : row 14 : beta_own = -1.013317040565403 | matches table at printed precision |
-| 65 | table cells | 0.912 | tables_revision_v11/own_only_vs_joint_identity_v11.csv : row 9 : sum_beta_ext_times_gamma = -0.9115279456573095 | matches table at printed precision |
-| 65 | table cells | 1.925 | tables_revision_v11/own_only_vs_joint_identity_v11.csv : row 2 : rhs_beta_own_plus_sum = -1.9253007042875263 | matches table at printed precision |
-| 65 | table cells | 1.925 | tables_revision_v11/own_only_vs_joint_identity_v11.csv : row 2 : rhs_beta_own_plus_sum = -1.9253007042875263 | matches table at printed precision |
+| 65 | table cells | 1.013 | tables/revision_v11/own_only_vs_joint_identity_v11.csv : row 14 : beta_own = -1.013317040565403 | matches table at printed precision |
+| 65 | table cells | 0.912 | tables/revision_v11/own_only_vs_joint_identity_v11.csv : row 9 : sum_beta_ext_times_gamma = -0.9115279456573095 | matches table at printed precision |
+| 65 | table cells | 1.925 | tables/revision_v11/own_only_vs_joint_identity_v11.csv : row 2 : rhs_beta_own_plus_sum = -1.9253007042875263 | matches table at printed precision |
+| 65 | table cells | 1.925 | tables/revision_v11/own_only_vs_joint_identity_v11.csv : row 2 : rhs_beta_own_plus_sum = -1.9253007042875263 | matches table at printed precision |
 | 66 | paragraph | 0.832 | tables/ring_pair_collinearity_v8_followup4.csv : row 5 : uncentred_cosine = 0.8319633730226271 | matches table at printed precision |
 | 66 | paragraph | 0.725 | tables/ring_pair_collinearity_v8_followup4.csv : row 6 : uncentred_cosine = 0.7245785016729922 | matches table at printed precision |
 | 66 | paragraph | 0.897 | tables/ring_pair_collinearity_v8_followup4.csv : row 7 : uncentred_cosine = 0.8965700802007894 | matches table at printed precision |
@@ -340,24 +340,24 @@ None.
 | 69 | paragraph | 7.2 | tables/model_importance.csv : row 8 : gain_share = 0.0716928157463263 (x100) | matches table at printed precision |
 | 69 | paragraph | 9.5 | tables/model_importance.csv : row 4 : gain_share = 0.0946232657014922 (x100) | matches table at printed precision |
 | 69 | paragraph | 3.9 | tables/model_importance.csv : row 2 : gain_share = 0.0390211545783616 (x100) | matches table at printed precision |
-| 70 | paragraph | 0.795 | tables_revision_v11/model_benchmark_v11.csv : row 2 : r2 = 0.7952289586107377 | matches table at printed precision |
-| 70 | paragraph | 0.775 | tables_revision_v11/model_benchmark_v11.csv : row 4 : r2 = 0.7748403552003325 | matches table at printed precision |
-| 70 | paragraph | 0.773 | tables_revision_v11/model_benchmark_v11.csv : row 3 : r2 = 0.773325499507219 | matches table at printed precision |
-| 70 | paragraph | 0.711 | tables_revision_v11/model_benchmark_v11.csv : row 5 : r2 = 0.710954602121477 | matches table at printed precision |
-| 71 | table caption | 19650 | tables_revision_v11/model_benchmark_v11.csv : row 2 : n = 19650.0 | matches table at printed precision |
-| 71 | table caption | 5 | tables_revision_v11/model_benchmark_v11.csv : row 2 : folds = 5.0 | matches table at printed precision |
-| 71 | table cells | 0.795 | tables_revision_v11/model_benchmark_v11.csv : row 2 : r2 = 0.7952289586107377 | matches table at printed precision |
-| 71 | table cells | 1.184 | tables_revision_v11/model_benchmark_v11.csv : row 2 : rmse_C = 1.1841778008221235 | matches table at printed precision |
-| 71 | table cells | 0.903 | tables_revision_v11/model_benchmark_v11.csv : row 2 : mae_C = 0.9030751686450752 | matches table at printed precision |
-| 71 | table cells | 0.775 | tables_revision_v11/model_benchmark_v11.csv : row 4 : r2 = 0.7748403552003325 | matches table at printed precision |
-| 71 | table cells | 1.242 | tables_revision_v11/model_benchmark_v11.csv : row 4 : rmse_C = 1.2417321431041028 | matches table at printed precision |
-| 71 | table cells | 0.943 | tables_revision_v11/model_benchmark_v11.csv : row 4 : mae_C = 0.9430597858494444 | matches table at printed precision |
-| 71 | table cells | 0.773 | tables_revision_v11/model_benchmark_v11.csv : row 3 : r2 = 0.773325499507219 | matches table at printed precision |
-| 71 | table cells | 1.246 | tables_revision_v11/model_benchmark_v11.csv : row 3 : rmse_C = 1.2459022769824748 | matches table at printed precision |
-| 71 | table cells | 0.958 | tables_revision_v11/model_benchmark_v11.csv : row 3 : mae_C = 0.9583973484304756 | matches table at printed precision |
-| 71 | table cells | 0.711 | tables_revision_v11/model_benchmark_v11.csv : row 5 : r2 = 0.710954602121477 | matches table at printed precision |
-| 71 | table cells | 1.407 | tables_revision_v11/model_benchmark_v11.csv : row 5 : rmse_C = 1.4069079229508306 | matches table at printed precision |
-| 71 | table cells | 1.099 | tables_revision_v11/model_benchmark_v11.csv : row 5 : mae_C = 1.0992752871216585 | matches table at printed precision |
+| 70 | paragraph | 0.795 | tables/revision_v11/model_benchmark_v11.csv : row 2 : r2 = 0.7952289586107377 | matches table at printed precision |
+| 70 | paragraph | 0.775 | tables/revision_v11/model_benchmark_v11.csv : row 4 : r2 = 0.7748403552003325 | matches table at printed precision |
+| 70 | paragraph | 0.773 | tables/revision_v11/model_benchmark_v11.csv : row 3 : r2 = 0.773325499507219 | matches table at printed precision |
+| 70 | paragraph | 0.711 | tables/revision_v11/model_benchmark_v11.csv : row 5 : r2 = 0.710954602121477 | matches table at printed precision |
+| 71 | table caption | 19650 | tables/revision_v11/model_benchmark_v11.csv : row 2 : n = 19650.0 | matches table at printed precision |
+| 71 | table caption | 5 | tables/revision_v11/model_benchmark_v11.csv : row 2 : folds = 5.0 | matches table at printed precision |
+| 71 | table cells | 0.795 | tables/revision_v11/model_benchmark_v11.csv : row 2 : r2 = 0.7952289586107377 | matches table at printed precision |
+| 71 | table cells | 1.184 | tables/revision_v11/model_benchmark_v11.csv : row 2 : rmse_C = 1.1841778008221235 | matches table at printed precision |
+| 71 | table cells | 0.903 | tables/revision_v11/model_benchmark_v11.csv : row 2 : mae_C = 0.9030751686450752 | matches table at printed precision |
+| 71 | table cells | 0.775 | tables/revision_v11/model_benchmark_v11.csv : row 4 : r2 = 0.7748403552003325 | matches table at printed precision |
+| 71 | table cells | 1.242 | tables/revision_v11/model_benchmark_v11.csv : row 4 : rmse_C = 1.2417321431041028 | matches table at printed precision |
+| 71 | table cells | 0.943 | tables/revision_v11/model_benchmark_v11.csv : row 4 : mae_C = 0.9430597858494444 | matches table at printed precision |
+| 71 | table cells | 0.773 | tables/revision_v11/model_benchmark_v11.csv : row 3 : r2 = 0.773325499507219 | matches table at printed precision |
+| 71 | table cells | 1.246 | tables/revision_v11/model_benchmark_v11.csv : row 3 : rmse_C = 1.2459022769824748 | matches table at printed precision |
+| 71 | table cells | 0.958 | tables/revision_v11/model_benchmark_v11.csv : row 3 : mae_C = 0.9583973484304756 | matches table at printed precision |
+| 71 | table cells | 0.711 | tables/revision_v11/model_benchmark_v11.csv : row 5 : r2 = 0.710954602121477 | matches table at printed precision |
+| 71 | table cells | 1.407 | tables/revision_v11/model_benchmark_v11.csv : row 5 : rmse_C = 1.4069079229508306 | matches table at printed precision |
+| 71 | table cells | 1.099 | tables/revision_v11/model_benchmark_v11.csv : row 5 : mae_C = 1.0992752871216585 | matches table at printed precision |
 | 72 | figure caption | 300 | code/src/fw_config.py:60 | constant; source stated |
 | 72 | figure caption | 200 | code/src/fw_config.py:57 n_refits | constant; source stated |
 | 74 | paragraph | 744 | tables/test_support_counts.csv : rows [2, 3, 4, 5] : sum of n_matched = 744.0 | matches table sum |
@@ -498,76 +498,76 @@ None.
 | 82 | table cells | 1463 | tables/decision_summary.csv : row 5 : m3_per_degree = 1463.069268458413 | matches table at printed precision |
 | 82 | table cells | 4.8 | tables/decision_summary.csv : row 5 : MWh_per_degree [desalinated seawater (SWRO)] = 4.754975122489843 | matches table at printed precision |
 | 84 | paragraph | 0.5 | code/negi_original/NEGI_Framework.py:749 | constant; source stated |
-| 84 | paragraph | 0.127 | tables_revision_v11/tradeoff_illustration_v11.csv : row 2 : negi_p05 = -0.1274561931761514 | matches table at printed precision |
-| 84 | paragraph | 0.203 | tables_revision_v11/tradeoff_illustration_v11.csv : row 3 : negi_p05 = -0.2032475503266518 | matches table at printed precision |
-| 84 | paragraph | 0.213 | tables_revision_v11/tradeoff_illustration_v11.csv : row 4 : negi_p05 = -0.2131252626946737 | matches table at printed precision |
+| 84 | paragraph | 0.127 | tables/revision_v11/tradeoff_illustration_v11.csv : row 2 : negi_p05 = -0.1274561931761514 | matches table at printed precision |
+| 84 | paragraph | 0.203 | tables/revision_v11/tradeoff_illustration_v11.csv : row 3 : negi_p05 = -0.2032475503266518 | matches table at printed precision |
+| 84 | paragraph | 0.213 | tables/revision_v11/tradeoff_illustration_v11.csv : row 4 : negi_p05 = -0.2131252626946737 | matches table at printed precision |
 | 84 | paragraph | 1.0 | code/negi_original/NEGI_Framework.py:750 | constant; source stated |
-| 84 | paragraph | 0.110 | tables_revision_v11/tradeoff_illustration_v11.csv : row 2 : negi_p10 = 0.1097144043683741 | matches table at printed precision |
-| 84 | paragraph | 0.034 | tables_revision_v11/tradeoff_illustration_v11.csv : row 3 : negi_p10 = 0.0340830758704167 | matches table at printed precision |
+| 84 | paragraph | 0.110 | tables/revision_v11/tradeoff_illustration_v11.csv : row 2 : negi_p10 = 0.1097144043683741 | matches table at printed precision |
+| 84 | paragraph | 0.034 | tables/revision_v11/tradeoff_illustration_v11.csv : row 3 : negi_p10 = 0.0340830758704167 | matches table at printed precision |
 | 84 | paragraph | 5 | code/src/fw_config.py:35 dose_bins | constant; source stated |
 | 84 | paragraph | 8 | code/src/fw_config.py:35 dose_bins | constant; source stated |
-| 84 | paragraph | 0.078 | tables_revision_v11/tradeoff_illustration_v11.csv : row 4 : negi_p10 = -0.0784493264781571 | matches table at printed precision |
+| 84 | paragraph | 0.078 | tables/revision_v11/tradeoff_illustration_v11.csv : row 4 : negi_p10 = -0.0784493264781571 | matches table at printed precision |
 | 84 | paragraph | 1 | code/src/fw_config.py:35 dose_bins | constant; source stated |
 | 84 | paragraph | 2 | code/src/fw_config.py:35 dose_bins | constant; source stated |
-| 84 | paragraph | 2.81 | tables_revision_v11/tradeoff_illustration_v11.csv : row 2 : measured_cooling_C = 2.808226658795508 | matches table at printed precision |
-| 84 | paragraph | 10.83 | tables_revision_v11/tradeoff_illustration_v11.csv : row 2 : benefit_scale_S_C = 10.830996320982276 | matches table at printed precision |
-| 84 | paragraph | 0.259 | tables_revision_v11/tradeoff_illustration_v11.csv : row 2 : normalized_benefit = 0.2592768546468148 | matches table at printed precision |
+| 84 | paragraph | 2.81 | tables/revision_v11/tradeoff_illustration_v11.csv : row 2 : measured_cooling_C = 2.808226658795508 | matches table at printed precision |
+| 84 | paragraph | 10.83 | tables/revision_v11/tradeoff_illustration_v11.csv : row 2 : benefit_scale_S_C = 10.830996320982276 | matches table at printed precision |
+| 84 | paragraph | 0.259 | tables/revision_v11/tradeoff_illustration_v11.csv : row 2 : normalized_benefit = 0.2592768546468148 | matches table at printed precision |
 | 84 | paragraph | 0.5 | code/negi_original/NEGI_Framework.py:749 | constant; source stated |
-| 84 | paragraph | 0.150 | tables_revision_v11/tradeoff_illustration_v11.csv : row 2 : greened_fraction_f = 0.1495624502784407 | matches table at printed precision |
-| 84 | paragraph | 0.387 | tables_revision_v11/tradeoff_illustration_v11.csv : row 2 : cost_p05 = 0.3867330478229663 | matches table at printed precision |
-| 84 | paragraph | 0.127 | tables_revision_v11/tradeoff_illustration_v11.csv : row 2 : negi_p05 = -0.1274561931761514 | matches table at printed precision |
+| 84 | paragraph | 0.150 | tables/revision_v11/tradeoff_illustration_v11.csv : row 2 : greened_fraction_f = 0.1495624502784407 | matches table at printed precision |
+| 84 | paragraph | 0.387 | tables/revision_v11/tradeoff_illustration_v11.csv : row 2 : cost_p05 = 0.3867330478229663 | matches table at printed precision |
+| 84 | paragraph | 0.127 | tables/revision_v11/tradeoff_illustration_v11.csv : row 2 : negi_p05 = -0.1274561931761514 | matches table at printed precision |
 | 85 | table caption | 1.0 | code/negi_original/NEGI_Framework.py:745 | constant; source stated |
 | 85 | table cells | 0.5 | code/negi_original/NEGI_Framework.py:749 | constant; source stated |
 | 85 | table cells | 1.0 | code/negi_original/NEGI_Framework.py:745 | constant; source stated |
 | 85 | table cells | 1 | code/src/fw_config.py:35 dose_bins | constant; source stated |
 | 85 | table cells | 2 | code/src/fw_config.py:35 dose_bins | constant; source stated |
-| 85 | table cells | 419 | tables_revision_v11/tradeoff_illustration_v11.csv : row 2 : n_matched_primary = 419.0 | matches table at printed precision |
-| 85 | table cells | 0.150 | tables_revision_v11/tradeoff_illustration_v11.csv : row 2 : greened_fraction_f = 0.1495624502784407 | matches table at printed precision |
-| 85 | table cells | 2.81 | tables_revision_v11/tradeoff_illustration_v11.csv : row 2 : measured_cooling_C = 2.808226658795508 | matches table at printed precision |
-| 85 | table cells | 0.259 | tables_revision_v11/tradeoff_illustration_v11.csv : row 2 : normalized_benefit = 0.2592768546468148 | matches table at printed precision |
-| 85 | table cells | 0.127 | tables_revision_v11/tradeoff_illustration_v11.csv : row 2 : negi_p05 = -0.1274561931761514 | matches table at printed precision |
-| 85 | table cells | 0.110 | tables_revision_v11/tradeoff_illustration_v11.csv : row 2 : negi_p10 = 0.1097144043683741 | matches table at printed precision |
+| 85 | table cells | 419 | tables/revision_v11/tradeoff_illustration_v11.csv : row 2 : n_matched_primary = 419.0 | matches table at printed precision |
+| 85 | table cells | 0.150 | tables/revision_v11/tradeoff_illustration_v11.csv : row 2 : greened_fraction_f = 0.1495624502784407 | matches table at printed precision |
+| 85 | table cells | 2.81 | tables/revision_v11/tradeoff_illustration_v11.csv : row 2 : measured_cooling_C = 2.808226658795508 | matches table at printed precision |
+| 85 | table cells | 0.259 | tables/revision_v11/tradeoff_illustration_v11.csv : row 2 : normalized_benefit = 0.2592768546468148 | matches table at printed precision |
+| 85 | table cells | 0.127 | tables/revision_v11/tradeoff_illustration_v11.csv : row 2 : negi_p05 = -0.1274561931761514 | matches table at printed precision |
+| 85 | table cells | 0.110 | tables/revision_v11/tradeoff_illustration_v11.csv : row 2 : negi_p10 = 0.1097144043683741 | matches table at printed precision |
 | 85 | table cells | 3 | code/src/fw_config.py:35 dose_bins | constant; source stated |
 | 85 | table cells | 4 | code/src/fw_config.py:35 dose_bins | constant; source stated |
-| 85 | table cells | 183 | tables_revision_v11/tradeoff_illustration_v11.csv : row 3 : n_matched_primary = 183.0 | matches table at printed precision |
-| 85 | table cells | 0.375 | tables_revision_v11/tradeoff_illustration_v11.csv : row 3 : greened_fraction_f = 0.3752276867030966 | matches table at printed precision |
-| 85 | table cells | 4.43 | tables_revision_v11/tradeoff_illustration_v11.csv : row 3 : measured_cooling_C = 4.433243363572172 | matches table at printed precision |
-| 85 | table cells | 0.409 | tables_revision_v11/tradeoff_illustration_v11.csv : row 3 : normalized_benefit = 0.4093107625735133 | matches table at printed precision |
-| 85 | table cells | 0.203 | tables_revision_v11/tradeoff_illustration_v11.csv : row 3 : negi_p05 = -0.2032475503266518 | matches table at printed precision |
-| 85 | table cells | 0.034 | tables_revision_v11/tradeoff_illustration_v11.csv : row 3 : negi_p10 = 0.0340830758704167 | matches table at printed precision |
+| 85 | table cells | 183 | tables/revision_v11/tradeoff_illustration_v11.csv : row 3 : n_matched_primary = 183.0 | matches table at printed precision |
+| 85 | table cells | 0.375 | tables/revision_v11/tradeoff_illustration_v11.csv : row 3 : greened_fraction_f = 0.3752276867030966 | matches table at printed precision |
+| 85 | table cells | 4.43 | tables/revision_v11/tradeoff_illustration_v11.csv : row 3 : measured_cooling_C = 4.433243363572172 | matches table at printed precision |
+| 85 | table cells | 0.409 | tables/revision_v11/tradeoff_illustration_v11.csv : row 3 : normalized_benefit = 0.4093107625735133 | matches table at printed precision |
+| 85 | table cells | 0.203 | tables/revision_v11/tradeoff_illustration_v11.csv : row 3 : negi_p05 = -0.2032475503266518 | matches table at printed precision |
+| 85 | table cells | 0.034 | tables/revision_v11/tradeoff_illustration_v11.csv : row 3 : negi_p10 = 0.0340830758704167 | matches table at printed precision |
 | 85 | table cells | 5 | code/src/fw_config.py:35 dose_bins | constant; source stated |
 | 85 | table cells | 8 | code/src/fw_config.py:35 dose_bins | constant; source stated |
-| 85 | table cells | 244 | tables_revision_v11/tradeoff_illustration_v11.csv : row 4 : n_matched_primary = 244.0 | matches table at printed precision |
-| 85 | table cells | 0.705 | tables_revision_v11/tradeoff_illustration_v11.csv : row 4 : greened_fraction_f = 0.7049180327868853 | matches table at printed precision |
-| 85 | table cells | 6.79 | tables_revision_v11/tradeoff_illustration_v11.csv : row 4 : measured_cooling_C = 6.78528025324036 | matches table at printed precision |
-| 85 | table cells | 0.626 | tables_revision_v11/tradeoff_illustration_v11.csv : row 4 : normalized_benefit = 0.6264687063087281 | matches table at printed precision |
-| 85 | table cells | 0.213 | tables_revision_v11/tradeoff_illustration_v11.csv : row 4 : negi_p05 = -0.2131252626946737 | matches table at printed precision |
-| 85 | table cells | 0.078 | tables_revision_v11/tradeoff_illustration_v11.csv : row 4 : negi_p10 = -0.0784493264781571 | matches table at printed precision |
+| 85 | table cells | 244 | tables/revision_v11/tradeoff_illustration_v11.csv : row 4 : n_matched_primary = 244.0 | matches table at printed precision |
+| 85 | table cells | 0.705 | tables/revision_v11/tradeoff_illustration_v11.csv : row 4 : greened_fraction_f = 0.7049180327868853 | matches table at printed precision |
+| 85 | table cells | 6.79 | tables/revision_v11/tradeoff_illustration_v11.csv : row 4 : measured_cooling_C = 6.78528025324036 | matches table at printed precision |
+| 85 | table cells | 0.626 | tables/revision_v11/tradeoff_illustration_v11.csv : row 4 : normalized_benefit = 0.6264687063087281 | matches table at printed precision |
+| 85 | table cells | 0.213 | tables/revision_v11/tradeoff_illustration_v11.csv : row 4 : negi_p05 = -0.2131252626946737 | matches table at printed precision |
+| 85 | table cells | 0.078 | tables/revision_v11/tradeoff_illustration_v11.csv : row 4 : negi_p10 = -0.0784493264781571 | matches table at printed precision |
 | 85 | table cells | 9 | code/src/fw_config.py:35 dose_bins | constant; source stated |
 | 85 | table cells | 9 | code/src/fw_config.py:35 dose_bins | constant; source stated |
-| 85 | table cells | 160 | tables_revision_v11/tradeoff_illustration_v11.csv : row 5 : n_matched_primary = 160.0 | matches table at printed precision |
-| 85 | table cells | 1.000 | tables_revision_v11/tradeoff_illustration_v11.csv : row 5 : greened_fraction_f = 1.0 | matches table at printed precision |
-| 85 | table cells | 10.83 | tables_revision_v11/tradeoff_illustration_v11.csv : row 5 : measured_cooling_C = 10.830996320982276 | matches table at printed precision |
-| 85 | table cells | 1.000 | tables_revision_v11/tradeoff_illustration_v11.csv : row 5 : greened_fraction_f = 1.0 | matches table at printed precision |
-| 85 | table cells | 0.000 | tables_revision_v11/tradeoff_illustration_v11.csv : row 5 : negi_p05 = 0.0 | matches table at printed precision |
-| 85 | table cells | 0.000 | tables_revision_v11/tradeoff_illustration_v11.csv : row 5 : negi_p05 = 0.0 | matches table at printed precision |
+| 85 | table cells | 160 | tables/revision_v11/tradeoff_illustration_v11.csv : row 5 : n_matched_primary = 160.0 | matches table at printed precision |
+| 85 | table cells | 1.000 | tables/revision_v11/tradeoff_illustration_v11.csv : row 5 : greened_fraction_f = 1.0 | matches table at printed precision |
+| 85 | table cells | 10.83 | tables/revision_v11/tradeoff_illustration_v11.csv : row 5 : measured_cooling_C = 10.830996320982276 | matches table at printed precision |
+| 85 | table cells | 1.000 | tables/revision_v11/tradeoff_illustration_v11.csv : row 5 : greened_fraction_f = 1.0 | matches table at printed precision |
+| 85 | table cells | 0.000 | tables/revision_v11/tradeoff_illustration_v11.csv : row 5 : negi_p05 = 0.0 | matches table at printed precision |
+| 85 | table cells | 0.000 | tables/revision_v11/tradeoff_illustration_v11.csv : row 5 : negi_p05 = 0.0 | matches table at printed precision |
 | 86 | paragraph | 1.81 | tables/water.csv : row 3 : depth_m = 1.8115142857142863 | matches table at printed precision |
 | 86 | paragraph | 18115 | tables/water.csv : row 3 : m3_per_ha_yr = 18115.142857142862 | matches table at printed precision |
 | 86 | paragraph | 3.25 | code/src/fw_config.py:87 | constant; source stated |
 | 86 | paragraph | 58.9 | tables/energy.csv : row 2 : MWh_per_ha_yr_central = 58.8742142857143 | matches table at printed precision |
 | 86 | paragraph | 0.81 | code/src/fw_panel.py:15-16 (nine pixels of 0.09 ha) | constant; source stated |
 | 86 | paragraph | 14673 | tables/decision_summary.csv : row 5 : water_m3 = 14673.265714285715 | matches table at printed precision |
-| 86 | paragraph | 10.03 | tables_revision_v11/tradeoff_illustration_v11.csv : row 5 : measured_cooling_concurrent_C = 10.029098437524045 | matches table at printed precision |
-| 86 | paragraph | 4.8 | tables_revision_v11/tradeoff_illustration_v11.csv : row 5 : swro_MWh_per_degree_central = 4.754975122489843 | matches table at printed precision |
-| 86 | paragraph | 2.9 | tables_revision_v11/tradeoff_illustration_v11.csv : row 2 : swro_MWh_per_degree_central = 2.890196555833614 | matches table at printed precision |
-| 86 | paragraph | 5.3 | tables_revision_v11/tradeoff_illustration_v11.csv : row 4 : swro_MWh_per_degree_central = 5.311708317676671 | matches table at printed precision |
-| 86 | paragraph | 1.5 | tables_revision_v11/tradeoff_illustration_v11.csv : row 2 : swro_MWh_per_degree_low = 1.543908416577785 | matches table at printed precision |
-| 86 | paragraph | 11.6 | tables_revision_v11/tradeoff_illustration_v11.csv : row 4 : swro_MWh_per_degree_high = 11.576800179551718 | matches table at printed precision |
+| 86 | paragraph | 10.03 | tables/revision_v11/tradeoff_illustration_v11.csv : row 5 : measured_cooling_concurrent_C = 10.029098437524045 | matches table at printed precision |
+| 86 | paragraph | 4.8 | tables/revision_v11/tradeoff_illustration_v11.csv : row 5 : swro_MWh_per_degree_central = 4.754975122489843 | matches table at printed precision |
+| 86 | paragraph | 2.9 | tables/revision_v11/tradeoff_illustration_v11.csv : row 2 : swro_MWh_per_degree_central = 2.890196555833614 | matches table at printed precision |
+| 86 | paragraph | 5.3 | tables/revision_v11/tradeoff_illustration_v11.csv : row 4 : swro_MWh_per_degree_central = 5.311708317676671 | matches table at printed precision |
+| 86 | paragraph | 1.5 | tables/revision_v11/tradeoff_illustration_v11.csv : row 2 : swro_MWh_per_degree_low = 1.543908416577785 | matches table at printed precision |
+| 86 | paragraph | 11.6 | tables/revision_v11/tradeoff_illustration_v11.csv : row 4 : swro_MWh_per_degree_high = 11.576800179551718 | matches table at printed precision |
 | 86 | paragraph | 0.60 | code/src/fw_config.py:88 | constant; source stated |
-| 86 | paragraph | 0.53 | tables_revision_v11/tradeoff_illustration_v11.csv : row 2 : tse_MWh_per_degree_central = 0.5335747487692825 | matches table at printed precision |
-| 86 | paragraph | 0.98 | tables_revision_v11/tradeoff_illustration_v11.csv : row 4 : tse_MWh_per_degree_central = 0.980623074032616 | matches table at printed precision |
-| 92 | paragraph | 2.9 | tables_revision_v11/tradeoff_illustration_v11.csv : row 2 : swro_MWh_per_degree_central = 2.890196555833614 | matches table at printed precision |
-| 92 | paragraph | 5.3 | tables_revision_v11/tradeoff_illustration_v11.csv : row 4 : swro_MWh_per_degree_central = 5.311708317676671 | matches table at printed precision |
+| 86 | paragraph | 0.53 | tables/revision_v11/tradeoff_illustration_v11.csv : row 2 : tse_MWh_per_degree_central = 0.5335747487692825 | matches table at printed precision |
+| 86 | paragraph | 0.98 | tables/revision_v11/tradeoff_illustration_v11.csv : row 4 : tse_MWh_per_degree_central = 0.980623074032616 | matches table at printed precision |
+| 92 | paragraph | 2.9 | tables/revision_v11/tradeoff_illustration_v11.csv : row 2 : swro_MWh_per_degree_central = 2.890196555833614 | matches table at printed precision |
+| 92 | paragraph | 5.3 | tables/revision_v11/tradeoff_illustration_v11.csv : row 4 : swro_MWh_per_degree_central = 5.311708317676671 | matches table at printed precision |
 | 96 | paragraph | 55.7 | tables/headline_block_v8.csv : row 2 : dominant_pooled_block_leverage_share = 0.5566428735896846 (x100) | matches table at printed precision |
 | 99 | paragraph | 0.795 | tables/model_cv.csv : row 2 : r2 = 0.7952289586107377 | matches table at printed precision |
 | 99 | paragraph | 1.181 | tables/headline_block_v8.csv : row 2 : point_C_per_pixel = -1.1805706405801224 | matches table at printed precision |
@@ -576,10 +576,10 @@ None.
 | 99 | paragraph | 1.0 | tables/ring_reduced_coefficients_v8_followup6.csv rows 2, 6, 9 and tables/pixel_subring_regression_v8_followup6.csv rows 2, 8 (own coefficients -1.036 to -0.988) | constant; source stated |
 | 99 | paragraph | 1.01 | tables/test_by_dose.csv : row 9 : difference_C = 1.0091290752346151 | matches table at printed precision |
 | 99 | paragraph | 7.24 | tables/test_by_dose.csv : row 12 : difference_C = 7.243434222436154 | matches table at printed precision |
-| 99 | paragraph | 0.213 | tables_revision_v11/tradeoff_illustration_v11.csv : row 4 : negi_p05 = -0.2131252626946737 | matches table at printed precision |
-| 99 | paragraph | 0.110 | tables_revision_v11/tradeoff_illustration_v11.csv : row 2 : negi_p10 = 0.1097144043683741 | matches table at printed precision |
-| 99 | paragraph | 2.9 | tables_revision_v11/tradeoff_illustration_v11.csv : row 2 : swro_MWh_per_degree_central = 2.890196555833614 | matches table at printed precision |
-| 99 | paragraph | 5.3 | tables_revision_v11/tradeoff_illustration_v11.csv : row 4 : swro_MWh_per_degree_central = 5.311708317676671 | matches table at printed precision |
+| 99 | paragraph | 0.213 | tables/revision_v11/tradeoff_illustration_v11.csv : row 4 : negi_p05 = -0.2131252626946737 | matches table at printed precision |
+| 99 | paragraph | 0.110 | tables/revision_v11/tradeoff_illustration_v11.csv : row 2 : negi_p10 = 0.1097144043683741 | matches table at printed precision |
+| 99 | paragraph | 2.9 | tables/revision_v11/tradeoff_illustration_v11.csv : row 2 : swro_MWh_per_degree_central = 2.890196555833614 | matches table at printed precision |
+| 99 | paragraph | 5.3 | tables/revision_v11/tradeoff_illustration_v11.csv : row 4 : swro_MWh_per_degree_central = 5.311708317676671 | matches table at printed precision |
 
 ## Single-digit literals not treated as data
 

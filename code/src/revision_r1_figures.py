@@ -1,4 +1,4 @@
-"""Two figures for the revision (supervisor review M4 and M7), drawn from the r1 tables. Writes NEW PNGs in figures_r1/.
+"""Two figures for the revision (supervisor review M4 and M7), drawn from the r1 tables. Writes NEW PNGs in figures/r1/.
 usage: python revision_r1_figures.py <package_root>
 """
 import sys
@@ -11,8 +11,8 @@ import numpy as np  # noqa: E402
 import pandas as pd  # noqa: E402
 
 ROOT = Path(sys.argv[1]).resolve()
-T = ROOT / "tables_revision_r1"
-OUT = ROOT / "figures_r1"
+T = ROOT / "tables/revision_r1"
+OUT = ROOT / "figures/r1"
 OUT.mkdir(exist_ok=True)
 BLUE, ORANGE, AQUA = "#2a78d6", "#eb6834", "#1baf7a"
 INK, MUTED, GRID = "#0b0b0b", "#898781", "#e6e5e1"

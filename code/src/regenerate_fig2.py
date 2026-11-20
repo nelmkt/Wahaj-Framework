@@ -58,5 +58,5 @@ if __name__ == "__main__":
     cfg = Config()
     df, _ = panel.load(cfg)
     result = build(df, cfg)
-    figures.fig_cooling(result, cfg, Path("figures_png"), match_label="pre-treatment-only")
+    figures.fig_cooling(result, cfg, Path("figures/png"), match_label="pre-treatment-only")
     print("Figure 2 PNG/PDF regenerated with pre-treatment-only matching and trace tables.")

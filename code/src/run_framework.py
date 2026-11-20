@@ -4,7 +4,7 @@ Run from the package root:
     python code/src/run_framework.py --panel code/gee/panel.csv --out .
 
 Writes manuscript/REPORT.md, tables/results.json, tables/*.csv and matching
-five-figure sets in figures_png/ and figures_pdf/.
+five-figure sets in figures/png/ and figures/pdf/.
 """
 from __future__ import annotations
 

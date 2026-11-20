@@ -4,7 +4,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 MANIFEST = ROOT / "tables/SHA256SUMS_v8.txt"
-FOLDERS = ("figures_png", "figures_pdf", "tables", "code", "manuscript")
+FOLDERS = ("figures/png", "figures/pdf", "tables", "code", "manuscript")
 BLINDED_KEY = ROOT / "tables/imagery_sampling_key_v7.csv"
 
 

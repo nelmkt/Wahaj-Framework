@@ -1,6 +1,6 @@
 """Fig. 1 redrawn for the revision (supervisor review m7): same data and primary matched controls as
 code/src/regenerate_fig1_v8.py, with a scale bar, a north arrow, the coastline source and plain class names.
-Writes NEW figures_r1/fig_r1_cell_classes.png.   usage: python revision_r1_fig1_map.py <package_root>
+Writes NEW figures/r1/fig_r1_cell_classes.png.   usage: python revision_r1_fig1_map.py <package_root>
 """
 import sys
 from pathlib import Path
@@ -20,7 +20,7 @@ import fw_panel as panel  # noqa: E402
 from fw_config import SETTINGS, Config  # noqa: E402
 from regenerate_fig1_v8 import comparison  # noqa: E402
 
-OUT = ROOT / "figures_r1" / "fig_r1_cell_classes.png"
+OUT = ROOT / "figures/r1" / "fig_r1_cell_classes.png"
 if OUT.exists():
     raise SystemExit(f"Refusing to overwrite {OUT}")
 cfg = Config(panel_path=ROOT / "code" / "gee" / "panel.csv")

@@ -6,7 +6,7 @@ distance of the Landsat 8 thermal band, Holmes et al. 2024), aggregated to 90 m 
 estimators of Eqs. (3) and (6): the own-only zero-intercept slope and the joint model with external ring counts.
 Because there is no physical spillover, any ring coefficient is optical blurring by the sensor.
 
-Writes NEW tables_revision_r1/r1_psf_recovery.csv.  usage: python revision_r1_psf_recovery.py <package_root>
+Writes NEW tables/revision_r1/r1_psf_recovery.csv.  usage: python revision_r1_psf_recovery.py <package_root>
 """
 import sys
 from pathlib import Path
@@ -16,7 +16,7 @@ import pandas as pd
 from scipy.ndimage import distance_transform_edt, gaussian_filter
 
 ROOT = Path(sys.argv[1]).resolve()
-OUT = ROOT / "tables_revision_r1" / "r1_psf_recovery.csv"
+OUT = ROOT / "tables/revision_r1" / "r1_psf_recovery.csv"
 if OUT.exists():
     raise SystemExit(f"Refusing to overwrite {OUT}")
 

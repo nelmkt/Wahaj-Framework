@@ -1,7 +1,7 @@
 """Matched contrasts with re-retrieved LST (supervisor review M1). Runs only after gee_r1_lst_reretrieval.py.
 
 Replaces lst_<year> in the panel by lst_rr_<year> (joined on cell centre) and repeats the primary match.
-Writes NEW tables_revision_r1/r1_reretrieved_contrasts.csv.
+Writes NEW tables/revision_r1/r1_reretrieved_contrasts.csv.
 usage: python revision_r1_reretrieved_contrasts.py <package_root>
 """
 import sys
@@ -19,7 +19,7 @@ import fw_panel as panel  # noqa: E402
 from fw_config import SETTINGS, Config  # noqa: E402
 
 RR = ROOT / "code" / "gee" / "panel_lst_reretrieved_r1.csv"
-OUT = ROOT / "tables_revision_r1" / "r1_reretrieved_contrasts.csv"
+OUT = ROOT / "tables/revision_r1" / "r1_reretrieved_contrasts.csv"
 if not RR.exists():
     raise SystemExit(f"{RR} not found: run manuscript/gee_r1_lst_reretrieval.py first")
 if OUT.exists():

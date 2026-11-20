@@ -6,7 +6,7 @@ Functions imported: `load_new` and `subring_design` (`code/src/analyze_pixel_sub
 
 Saved inputs read: `code/gee/panel.csv`, `code/gee/pixel_external_counts_v8_raw.csv` (+ `.json`), `code/gee/pixel_external_subrings_v8_followup5_raw.csv` (+ `.json`), `code/src/jeddah_coastline_ne10m.csv`, `tables/figure1_population_comparison_v8.csv`, `tables/headline_block_v8.csv`, `tables/ring_reduced_coefficients_v8_followup6.csv`, `tables/pixel_subring_regression_v8_followup6.csv`.
 
-New files: `tables_revision_v11/leverage_share_check_v11.csv` (1,525 bytes), `tables_revision_v11/own_only_vs_joint_identity_v11.csv` (5,543 bytes). Nothing in `tables/` was touched.
+New files: `tables/revision_v11/leverage_share_check_v11.csv` (1,525 bytes), `tables/revision_v11/own_only_vs_joint_identity_v11.csv` (5,543 bytes). Nothing in `tables/` was touched.
 
 ## Population and outcome used
 

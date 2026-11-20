@@ -1,5 +1,5 @@
 """NDVI-threshold sensitivity (supervisor review, item on the 0.15 / 0.30 thresholds): the primary match repeated on
-panels exported with gee_r1_export_panel_thresholds.py. Writes NEW tables_revision_r1/r1_ndvi_thresholds.csv.
+panels exported with gee_r1_export_panel_thresholds.py. Writes NEW tables/revision_r1/r1_ndvi_thresholds.csv.
 usage: python revision_r1_ndvi_thresholds.py <package_root>
 """
 import dataclasses
@@ -16,7 +16,7 @@ import fw_matching as matching  # noqa: E402
 import fw_panel as panel  # noqa: E402
 from fw_config import SETTINGS, Config  # noqa: E402
 
-OUT = ROOT / "tables_revision_r1" / "r1_ndvi_thresholds.csv"
+OUT = ROOT / "tables/revision_r1" / "r1_ndvi_thresholds.csv"
 if OUT.exists():
     raise SystemExit(f"Refusing to overwrite {OUT}")
 G = ROOT / "code" / "gee"

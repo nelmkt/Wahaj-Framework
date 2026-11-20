@@ -45,7 +45,7 @@ def _jsonable(o):
 
 def run(cfg: Config) -> dict:
     out = Path(cfg.out_dir)
-    tables, figs = out / "tables", out / "figures_png"
+    tables, figs = out / "tables", out / "figures/png"
     tables.mkdir(parents=True, exist_ok=True)
     (out / "manuscript").mkdir(parents=True, exist_ok=True)
 

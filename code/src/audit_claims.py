@@ -149,17 +149,21 @@ def main():
     sio = read("logic_sio_integrity.csv")
     assert len(sio) == 17 and sum(r["inside_assumed_depth_band"] == "True" for r in sio) == 7
     assert not any(r["duplicate_branch_year_in_aggregated_file"] == "True" for r in sio)
-    assert (ROOT / "figures_pdf/fig3_model_test.pdf").stat().st_size < 500_000
-    png = {p.stem for p in (ROOT / "figures_png").glob("*.png")}
-    pdf = {p.stem for p in (ROOT / "figures_pdf").glob("*.pdf")}
+    assert (ROOT / "figures/pdf/fig3_model_test.pdf").stat().st_size < 500_000
+    png = {p.stem for p in (ROOT / "figures/png").glob("*.png")}
+    pdf = {p.stem for p in (ROOT / "figures/pdf").glob("*.pdf")}
     assert png == pdf == {"fig1_sample", "fig2_cooling", "fig3_model_test", "fig4_water_energy", "fig5_decision"}
     figure_code = (ROOT / "code/src/fw_figures.py").read_text(encoding="utf-8")
     assert "Hypothetical irrigation conversion (744-cell sensitivity)" in figure_code
     assert "Outside (744-cell sensitivity)" in figure_code
-    assert {"figures_png", "figures_pdf", "tables", "tables_revision_v11", "tables_revision_r1", "code", "docs"}.issubset(
-        {p.name for p in ROOT.iterdir()})
+    assert {"figures", "tables", "code", "docs"}.issubset({p.name for p in ROOT.iterdir()})
+    assert not any((ROOT / old).exists() for old in
+                   ("figures_png", "figures_pdf", "figures_r1", "tables_revision_r1", "tables_revision_v11"))
+    assert {p.name for p in (ROOT / "figures").iterdir() if p.is_dir()} == {"png", "pdf", "r1"}
+    assert {p.name for p in (ROOT / "tables").iterdir() if p.is_dir()} == {"revision_r1", "revision_v11"}
     assert {p.name for p in (ROOT / "code").iterdir() if p.is_dir()} == {"gee", "src", "negi_original"}
-    assert not any(p.is_dir() for folder in ("figures_png", "figures_pdf", "tables") for p in (ROOT / folder).iterdir())
+    assert not any(p.is_dir() for folder in ("figures/png", "figures/pdf", "figures/r1", "tables/revision_r1",
+                                             "tables/revision_v11") for p in (ROOT / folder).iterdir())
     assert not any(p.is_dir() for folder in ("gee", "src") for p in (ROOT / "code" / folder).iterdir())
     annual = read("gee_month_composite_changes.csv")
     baseline = next(r for r in annual if r["year"] == "2014")

@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased, 20 November 2026
+
+- `docs/demo/`: interactive demo of the published results (English and Korean), served at nelmkt.github.io/Wahaj-Framework/demo and usable offline after one visit. It reads the saved tables; no result changed.
+- `README.md` shortened to an overview. The full results table and the structure, code, interpretation, reproduction, tests, data and earlier-version sections moved unchanged to `docs/TECHNICAL_DETAILS.md`; README images are in `docs/assets/`.
+- `MANIFEST_SHA256.txt` lists the new and changed files. No code, table or figure changed.
+
 ## Unreleased — 22 October 2026
 
 - `manuscript/`: the five superseded v8 drafts read by four text checks, published unchanged so that the suite runs in full: 62 passed, 0 skipped; the claims audit passed.

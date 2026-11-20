@@ -18,8 +18,33 @@ Wahaj is the framework described in the paper. It asks whether an XGBoost model 
 
 **Interactive demo:** [nelmkt.github.io/Wahaj-Framework/demo](https://nelmkt.github.io/Wahaj-Framework/demo/) ([source](docs/demo/index.html)). Click a greened cell to see the measured cooling, the model test result and the assumed water and energy for that class. Every value is read from the tables in this repository.
 
+## At a glance
+
+**Wahaj measures how much greening actually cools a desert city, weighs that cooling against its water and energy cost, and uses a machine learning model's predictions only where they pass a test against the measured cooling.**
+
+[**Try the interactive demo**](https://nelmkt.github.io/Wahaj-Framework/demo/) (English and 한국어, works offline after one visit)
+
+| | Jeddah result | Where |
+| --- | --- | --- |
+| Measured cooling | **−1.18 °C** per greened 0.09 ha pixel, 1,006 matched cells (95% CI −1.25 to −0.93); placebo −0.05 °C | [`headline_block_v8.csv`](tables/headline_block_v8.csv), Figure 2 |
+| Model accuracy | XGBoost **R² 0.795** on held-out areas | [`model_cv.csv`](tables/model_cv.csv) |
+| Model on planting | Under-predicts measured cooling by **+1.0 to +7.2 °C**; only **14 of 744** test cells inside its data support | [`test_by_dose.csv`](tables/test_by_dose.csv), Figure 3 |
+| Decision | The test gate withheld the model, so no model-based scenario was released | [Results](#results-and-their-populations) |
+
+### Where to look
+
+| If you want | Open |
+| --- | --- |
+| The idea in two minutes | The [demo](https://nelmkt.github.io/Wahaj-Framework/demo/), then [Figure 3](figures_png/fig3_model_test.png) |
+| Every reported number, traced to its table and script | [`REPRODUCE.md`](REPRODUCE.md) |
+| What each file is | [`docs/FILE_GUIDE.md`](docs/FILE_GUIDE.md) |
+| The framework code | [`code/src/`](code/src) (modules start with `fw_`) |
+
+Files whose names end in `_v2`, `_v3_oldrecipe`, `_prior`, `_INVALID` or `_PRINTFAIL`, and the older `MANUSCRIPT_V8_FOLLOWUP*` drafts, are superseded versions kept on purpose as an audit trail. The audit scripts and checksum manifests refer to them, so they stay in place. They are not evidence for the paper; the current file for each result is listed in [`REPRODUCE.md`](REPRODUCE.md).
+
 ## Contents
 
+- [At a glance](#at-a-glance)
 - [Results and their populations](#results-and-their-populations)
 - [Repository structure](#repository-structure)
 - [What the code contains](#what-the-code-contains)

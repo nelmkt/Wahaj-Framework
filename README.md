@@ -2,53 +2,43 @@
 
 # Wahaj&nbsp;وهاج
 
-**Satellite evidence before city greening decisions**
+Checking satellite evidence before a city decides where to plant
 
 [![Live demo](https://img.shields.io/badge/Live%20demo-try%20it-0f4c5c?style=for-the-badge)](https://nelmkt.github.io/Wahaj-Framework/demo/)
 [![DOI](https://img.shields.io/badge/DOI-10.5281%2Fzenodo.23168529-1b6e2d?style=for-the-badge)](https://doi.org/10.5281/zenodo.23168529)
 [![License: MIT](https://img.shields.io/badge/License-MIT-b8862b?style=for-the-badge)](LICENSE)
 
-[![Python 3.12](https://img.shields.io/badge/Python-3.12-3776AB?style=flat&logo=python&logoColor=white)](https://www.python.org/)
-[![XGBoost](https://img.shields.io/badge/XGBoost-3.4-EB5E28?style=flat)](https://xgboost.readthedocs.io/)
-[![Landsat 8](https://img.shields.io/badge/Landsat%208-Earth%20Engine-4285F4?style=flat&logo=googleearth&logoColor=white)](https://earthengine.google.com/)
-[![Tests](https://img.shields.io/badge/tests-62%20passed-2e7d32?style=flat)](docs/TECHNICAL_DETAILS.md#tests-and-checks)
-[![ORCID](https://img.shields.io/badge/ORCID-0009--0007--9887--0280-A6CE39?style=flat&logo=orcid&logoColor=white)](https://orcid.org/0009-0007-9887-0280)
-
 [![The Wahaj interactive demo](docs/assets/wahaj_demo.png)](https://nelmkt.github.io/Wahaj-Framework/demo/)
 
 </div>
 
-## What Wahaj does
+## Why I built this
 
-Hot cities plant trees to cool down, but in Jeddah every tree runs on desalinated seawater, which costs energy. Wahaj is a remote sensing and machine learning framework that **measures how much greening really cools a city**, **weighs that cooling against its water and energy cost**, and **uses a model's "what if we plant here?" predictions only where they pass a test against the measured cooling**.
+Jeddah is hot, and planting trees is one of the usual ways cities try to cool down. The catch here is water: almost every tree in Jeddah is irrigated with desalinated seawater, and desalination takes a lot of energy. So before planting more, it's worth knowing how much cooling greening actually buys, and what it costs.
 
-Applied to Jeddah, it found that an accurate model can still be wrong about planting, and its test gate caught it.
+Wahaj is my attempt at answering that with satellite data. It measures the cooling that greening has already produced, puts a water and energy cost on it, and only trusts a machine learning model's "what if we plant here?" answers if they agree with what was measured.
+
+The most interesting result was a failure. The model I trained was accurate at predicting temperature, but it was wrong about planting, and the check I built into the framework caught that before any of its scenarios were used.
 
 ## How it works
 
 ![The six stages of Wahaj](docs/assets/how_wahaj_works.png)
 
-1. **Satellite panel.** Landsat 8 composites on 90 m cells, 2014 to 2025, built in Google Earth Engine.
-2. **Measured cooling.** Each greened cell is compared with matched land that never greened (matched difference-in-differences with spatial-block resampling).
-3. **ML model.** XGBoost predicts land surface temperature, validated on held-out spatial blocks.
-4. **Test gate.** The model is used only where its error stays inside a tolerance set in advance, on cells inside its data support.
-5. **Water and energy.** Irrigation and desalination energy behind each degree of cooling.
-6. **Decision support.** Every site class gets a verdict: within tolerance, not demonstrated, or insufficient evidence.
+I start from a Landsat 8 panel on 90 m cells covering 2014 to 2025, built in Google Earth Engine. For every cell that became greener, I compare it with similar land that never did (a matched difference-in-differences, resampled by spatial blocks), which gives the measured cooling.
 
-## Key results for Jeddah
+Separately, an XGBoost model predicts land surface temperature and is validated on spatial blocks it never saw. Before its planting predictions can be used anywhere, they have to land within a tolerance I fixed in advance, and only on cells that look like the data it was trained on. Then I convert each degree of cooling into irrigation water and desalination energy, and give every type of site one of three verdicts: within tolerance, not demonstrated, or not enough evidence.
 
-| | Result |
-| --- | --- |
-| Measured cooling | **−1.18 °C** per greened 0.09 ha pixel, 1,006 matched cells (95% CI −1.25 to −0.93); placebo before greening **−0.05 °C** |
-| Model accuracy | XGBoost **R² 0.795**, RMSE 1.18 °C on 19,650 held-out cells, the best of four regressors |
-| Model on planting | Under-predicts measured cooling by **+1.0 to +7.2 °C**; only **14 of 744** test cells lie inside its data support |
-| Gate decision | The model was withheld, so no model-based scenario was released |
+## What it found in Jeddah
+
+Greening cooled the ground by about 1.18 °C per greened 0.09 ha pixel, measured across 1,006 matched cells (95% CI −1.25 to −0.93 °C). The same comparison before any greening happened gives −0.05 °C, which is what you'd hope for.
+
+The model did well on its own terms: R² 0.795 and an RMSE of 1.18 °C on 19,650 held-out cells, the best of the four regressors I tried. But when I asked it about planting, it under-predicted the measured cooling by +1.0 to +7.2 °C, and only 14 of the 744 test cells were inside the range of data it had learned from. So the gate held it back, and no model-based planting scenario was released.
 
 ![Model skill on held-out areas, and model-predicted against measured cooling](figures/png/fig3_model_test.png)
 
-*Left: the model predicts temperature well on held-out areas. Right: it falls further short of the measured cooling as more of a cell is greened. Every number traces to a table in [`REPRODUCE.md`](REPRODUCE.md).*
+*Left: the model predicts temperature well on areas it hasn't seen. Right: it falls further behind the measured cooling the more of a cell is greened. Every number in this README traces back to a table in [`REPRODUCE.md`](REPRODUCE.md).*
 
-## Run it
+## Running it
 
 ```bash
 python -m pip install -r requirements.txt
@@ -57,9 +47,9 @@ python code/src/run_framework.py --panel code/gee/panel.csv --out .
 python -m pytest code/src -p no:cacheprovider
 ```
 
-Work in a copy: the pipeline writes tables and figures. Earth Engine is only needed to re-export the panel. Full steps are in [Technical details](docs/TECHNICAL_DETAILS.md#reproduction).
+It needs Python 3.12. Run it in a copy of the repo, since the pipeline writes its tables and figures in place. You only need Earth Engine if you want to re-export the satellite panel yourself. The full steps are in [Technical details](docs/TECHNICAL_DETAILS.md#reproduction).
 
-## Repository map
+## Finding your way around
 
 ```
 code/            Earth Engine exports (gee/), framework and analyses (src/), earlier index module
@@ -69,23 +59,15 @@ docs/            technical details, file guide, data notes, audits and the demo
 manuscript/      superseded drafts that the tests read
 ```
 
-| If you want | Open |
-| --- | --- |
-| The idea in two minutes | The [live demo](https://nelmkt.github.io/Wahaj-Framework/demo/) |
-| Every reported number, traced to its table and script | [`REPRODUCE.md`](REPRODUCE.md) |
-| Full results, methods notes, tests and data | [`docs/TECHNICAL_DETAILS.md`](docs/TECHNICAL_DETAILS.md) |
-| What each file is | [`docs/FILE_GUIDE.md`](docs/FILE_GUIDE.md) |
+If you just want the idea, try the [live demo](https://nelmkt.github.io/Wahaj-Framework/demo/). For every reported number and the script behind it, see [`REPRODUCE.md`](REPRODUCE.md). Methods notes, tests and data sources are in [`docs/TECHNICAL_DETAILS.md`](docs/TECHNICAL_DETAILS.md), and [`docs/FILE_GUIDE.md`](docs/FILE_GUIDE.md) explains what each file is.
 
-Files ending in `_v2`, `_v3_oldrecipe`, `_prior`, `_INVALID` or `_PRINTFAIL` are superseded versions kept on purpose as an audit trail. The audit scripts and checksum manifests refer to them, so they stay in place.
+You'll see files ending in `_v2`, `_v3_oldrecipe`, `_prior`, `_INVALID` or `_PRINTFAIL`. Those are older versions I kept on purpose as an audit trail; the audit scripts and checksum manifests point to them, so please leave them where they are.
 
-## Scope and limits
+## What it doesn't do
 
-- Land surface temperature, not air temperature or comfort.
-- Water and energy figures use assumed irrigation, not metered records.
-- One city so far. The workflow adapts to other hot, arid cities; Jeddah's numbers do not transfer.
-- See [Interpretation and portability](docs/TECHNICAL_DETAILS.md#interpretation-and-portability) for the full list.
+It measures land surface temperature, not air temperature or how comfortable people feel. The water and energy numbers rely on assumed irrigation rates rather than metered records. And it has only been applied to Jeddah so far: the workflow should carry over to other hot, dry cities, but Jeddah's numbers won't. There's more on this under [Interpretation and portability](docs/TECHNICAL_DETAILS.md#interpretation-and-portability).
 
-## Citation
+## Citing
 
 ```bibtex
 @software{almaktoum_wahaj_2026,
@@ -98,11 +80,10 @@ Files ending in `_v2`, `_v3_oldrecipe`, `_prior`, `_INVALID` or `_PRINTFAIL` are
 }
 ```
 
-GitHub also shows this under "Cite this repository", from [`CITATION.cff`](CITATION.cff).
+You can also use "Cite this repository" on GitHub, which reads [`CITATION.cff`](CITATION.cff).
 
 ## Licence and contact
 
-Code and files are released under the [MIT License](LICENSE), © 2026 Nelly F. Almaktoum. Satellite and other source data stay under their providers' terms; see [`docs/DATA.md`](docs/DATA.md).
+The code and files are under the [MIT License](LICENSE), © 2026 Nelly F. Almaktoum. Satellite and other source data stay under their providers' terms (see [`docs/DATA.md`](docs/DATA.md)).
 
-**Nelly F. Almaktoum**, King Abdulaziz University, Jeddah
-[nalmaktoum0001@stu.kau.edu.sa](mailto:nalmaktoum0001@stu.kau.edu.sa) | [ORCID](https://orcid.org/0009-0007-9887-0280) | [Issues](https://github.com/nelmkt/Wahaj-Framework/issues)
+I'm Nelly F. Almaktoum, at King Abdulaziz University in Jeddah. Questions and suggestions are welcome by [email](mailto:nalmaktoum0001@stu.kau.edu.sa) or through [issues](https://github.com/nelmkt/Wahaj-Framework/issues), and my ORCID is [0009-0007-9887-0280](https://orcid.org/0009-0007-9887-0280).
